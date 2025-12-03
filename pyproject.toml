@@ -1,0 +1,92 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "native-res"
+version = "0.1.0"
+description = "Descale analysis tools for VapourSynth"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "vsjetpack>=1.0.0",
+    "jetpytools",
+    "typer",
+    "rich",
+    "numpy>=2.0.0",
+    "matplotlib",
+    "scipy>=1.16.0",
+]
+
+[project.scripts]
+getfnative = "native_res.cli:native_app"
+getnative = "native_res.cli:native_app"
+getfscaler = "native_res.cli:scaler_app"
+getscaler = "native_res.cli:scaler_app"
+
+[dependency-groups]
+dev = [
+    "mypy==1.19.0",
+    "ruff==0.14.7",
+    "scipy-stubs>=1.16.0.0",
+    "vsstubs>=1.0.0.post1; python_version>='3.13'",
+]
+
+[tool.uv.sources]
+vsjetpack = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack", branch = "main" }
+
+[tool.uv.workspace]
+members = ["src/plugin"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/native_res", "README.md", "LICENSE", "pyproject.toml"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/native_res"]
+
+[tool.mypy]
+mypy_path = "$MYPY_CONFIG_FILE_DIR/stubs"
+
+# exclude = ["stubs/vapoursynth"]
+exclude_gitignore = true
+
+# Flags changed by --strict
+warn_return_any = false
+extra_checks = false
+
+# Misc
+warn_unreachable = true
+
+allow_redefinition_new = true
+local_partial_types = true
+implicit_reexport = false
+strict = true
+
+show_column_numbers = true
+pretty = true
+color_output = true
+error_summary = true
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+docstring-code-format = true
+
+[tool.ruff.lint]
+extend-select = [
+    "E",
+    "C4",
+    "I",
+    "PYI",
+    "Q",
+    "SIM",
+    "N",
+    "W",
+    "UP",
+    "FURB",
+    "RUF",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.*" = ["F401", "F403"]
