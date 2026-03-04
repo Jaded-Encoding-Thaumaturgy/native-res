@@ -10,7 +10,7 @@ from vskernels import ComplexKernel, ComplexKernelLike, Kernel, LeftShift, Point
 from vsmasktools import MaskLike, normalize_mask
 from vsscale import Rescale
 from vsscale.helpers import BottomCrop, CropRel, LeftCrop, RightCrop, TopCrop
-from vstools import Resolution, clip_data_gather, core, depth, get_prop, get_y, vs
+from vstools import clip_data_gather, core, depth, get_prop, get_y, vs
 
 logger = getLogger(__name__)
 
@@ -39,7 +39,7 @@ class _GetNativeResult(NamedTuple):
 
 def getfnative(
     clip: Annotated[vs.VideoNode, "OneFrameClip"],
-    dimensions: Iterable[tuple[float, float] | Resolution],
+    dimensions: Iterable[tuple[float, float]],
     kernel: ComplexKernelLike,
     crop: tuple[LeftCrop, RightCrop, TopCrop, BottomCrop] | None = None,
     shift: tuple[TopShift, LeftShift] = (0, 0),
