@@ -55,7 +55,7 @@ logger = getLogger(__name__)
 
 @native_app.command(
     cls=NativeCommand,
-    help="Find the native fractional resolution of upscaled material (mostly anime).",
+    help="Determine the best (fractional) native resolution for an upscaled frame.",
     no_args_is_help=True,
 )
 def getfnative_cli(
@@ -180,10 +180,9 @@ def getfscaler_cli(
         console=console,
         transient=True,
     )
+    task = progress.add_task("Gathering data...", total=None)
 
     with progress:
-        task = progress.add_task("Gathering data...", total=None)
-
         ress = getfscaler(
             clip,
             kernels=(*default_kernels, *kernels),
@@ -192,7 +191,6 @@ def getfscaler_cli(
             mask=mask,
             **scaler_args,
         )
-
     progress.update(task, completed=100, total=100, visible=False, refresh=True)
 
     # Results are sorted and displayed to the CLI for the user

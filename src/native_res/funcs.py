@@ -1,7 +1,8 @@
 """Python API"""
 
+from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger
-from typing import Annotated, Any, Callable, Iterable, Literal, NamedTuple, Sequence
+from typing import Annotated, Any, Literal, NamedTuple
 
 from jetpytools import CustomOverflowError, FuncExcept, to_arr
 from vsexprtools import ExprOp, norm_expr
