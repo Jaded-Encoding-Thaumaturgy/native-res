@@ -1,7 +1,8 @@
 """CLI module"""
 
+import warnings
 from itertools import zip_longest
-from logging import DEBUG, INFO, basicConfig, getLogger
+from logging import DEBUG, INFO, basicConfig, captureWarnings, getLogger
 from typing import Annotated, Any, Literal, assert_never, cast
 
 from jetpytools import SPath
@@ -43,6 +44,8 @@ from .kernels import default_kernels
 
 console = Console(stderr=True)
 
+warnings.filterwarnings("always")
+captureWarnings(True)
 basicConfig(
     level=INFO,
     handlers=[RichHandler(level=DEBUG, console=console)],
