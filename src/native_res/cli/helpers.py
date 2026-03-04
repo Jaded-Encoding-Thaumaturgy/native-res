@@ -115,18 +115,6 @@ def get_videonode_from_input(path: SPath, indexer: Indexer, frame: int, console:
     if not path.exists():
         raise BadParameter(f"{path.to_str()!r} doesn't exist.")
 
-    progress = Progress(
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        console=console,
-        transient=True,
-    )
-
-    with progress:
-        task = progress.add_task("Waking up VapourSynth...", total=True)
-        core.std.BlankClip(None, 1, 1, vs.GRAY8, 1, 1, 1, 0, True)
-    progress.update(task, completed=100, total=100, visible=False, refresh=True)
-
     if path.suffix in (".py", ".vpy"):
         runpy.run_path(str(path), run_name="__vapoursynth__")
 
