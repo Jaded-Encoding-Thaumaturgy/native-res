@@ -2,7 +2,6 @@ import ast
 import re
 import runpy
 from logging import DEBUG, getLogger
-from types import FrameType
 from typing import Any
 
 from jetpytools import CustomValueError, SPath, get_subclasses
