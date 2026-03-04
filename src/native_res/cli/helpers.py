@@ -126,13 +126,9 @@ def get_videonode_from_input(path: SPath, indexer: Indexer, frame: int, console:
         return out.clip
 
     if isinstance(indexer, BestSource):
-        # FIXME: Nuclear fix to allow KeyboardInterrupt (CTRL+C)
-        from signal import SIGINT, signal
+        from signal import SIG_DFL, SIGINT, signal
 
-        def sigint_handler(sig: int, frame: FrameType | None) -> None:
-            exit(1)
-
-        signal(SIGINT, sigint_handler)
+        signal(SIGINT, SIG_DFL)
 
     clip = indexer.source(path, 32, idx_props=False)
 
