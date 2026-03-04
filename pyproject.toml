@@ -13,8 +13,8 @@ dependencies = [
     "jetpytools",
     "typer",
     "rich",
-    "numpy>=2.0.0",
     "matplotlib",
+    "numpy>=2.0.0",
     "scipy>=1.16.0",
 ]
 
@@ -26,14 +26,11 @@ getscaler = "native_res.cli:scaler_app"
 
 [dependency-groups]
 dev = [
-    "mypy==1.19.0",
-    "ruff==0.14.7",
+    "mypy>=1.19.0, <1.20.0",
+    "ruff>=0.15.0, <0.16.0",
     "scipy-stubs>=1.16.0.0",
     "vsstubs>=1.0.0.post1; python_version>='3.13'",
 ]
-
-[tool.uv.sources]
-vsjetpack = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack", branch = "main" }
 
 [tool.uv.workspace]
 members = ["src/plugin"]

@@ -1,16 +1,10 @@
 [project]
-name = "vspreview-plugin-native-res"
+name = "vsview-native-res"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = [
-    "vsjetpack>=1.0.0",
-    "jetpytools",
-    "vspreview",
-    "native-res",
-    "pyqt6",
-]
+dependencies = ["vsjetpack>=1.0.0", "jetpytools", "vsview", "native-res"]
 
 [tool.uv.sources]
 native-res = { workspace = true }
