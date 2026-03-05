@@ -96,7 +96,7 @@ def show_default_kernels(value: bool) -> None:
         raise Exit(0)
 
 
-def show_builtin_kernels(value: bool) -> None:
+def show_vskernels(value: bool) -> None:
     if value:
         all_kernels = {k for k in get_subclasses(ComplexKernel) if not k.is_abstract}
 

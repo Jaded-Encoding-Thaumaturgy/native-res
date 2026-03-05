@@ -11,8 +11,8 @@ from .helpers import (
     resolve_kernel,
     set_debug,
     set_global_debug,
-    show_builtin_kernels,
     show_default_kernels,
+    show_vskernels,
 )
 
 
@@ -76,8 +76,8 @@ kernel_opt = Option(
     parser=resolve_kernel,
 )
 
-dimension_mode_opt = Option(
-    "--dimension-mode",
+dim_mode_opt = Option(
+    "--dim-mode",
     "-dm",
     help="The dimension to check.",
     metavar="height|width|h|w",
@@ -113,8 +113,8 @@ show_default_kernels_opt = Option(
     show_default=False,
     callback=show_default_kernels,
 )
-show_builtin_kernels_opt = Option(
-    "--show-builtin-kernels",
+show_vskernels_opt = Option(
+    "--show-kernels",
     help="Show the builtin kernels and exit.",
     is_eager=True,
     show_default=False,
@@ -122,8 +122,8 @@ show_builtin_kernels_opt = Option(
 )
 
 # getfnative exclusive
-range_dimension_opt = Option(
-    "--range-dimension",
+range_dim_opt = Option(
+    "--range-dim",
     "-rd",
     help="Inclusive range of dimension to check.",
     metavar="INTEGER INTEGER",
