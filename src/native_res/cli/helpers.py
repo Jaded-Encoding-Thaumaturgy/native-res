@@ -1,6 +1,5 @@
 import ast
 import re
-import runpy
 from logging import DEBUG, getLogger
 from typing import Any
 
@@ -115,9 +114,10 @@ def get_videonode_from_input(path: SPath, indexer: Indexer, frame: int, console:
         raise BadParameter(f"{path.to_str()!r} doesn't exist.")
 
     if path.suffix in (".py", ".vpy"):
-        runpy.run_path(str(path), run_name="__vapoursynth__")
+        from vsengine import load_script
 
-        out = vs.get_output()
+        load_script(path, module="__native_res__").result()
+        out = next(iter(vs.get_outputs().values()))
 
         if not isinstance(out, vs.VideoOutputTuple):
             raise CustomValueError("Unknown VapourSynth output", get_videonode_from_input, type(out))

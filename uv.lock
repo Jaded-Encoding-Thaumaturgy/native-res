@@ -439,6 +439,7 @@ dependencies = [
     { name = "rich" },
     { name = "scipy" },
     { name = "typer" },
+    { name = "vsjetengine" },
     { name = "vsjetpack" },
 ]
 
@@ -458,6 +459,7 @@ requires-dist = [
     { name = "rich" },
     { name = "scipy", specifier = ">=1.16.0" },
     { name = "typer" },
+    { name = "vsjetengine" },
     { name = "vsjetpack", specifier = ">=1.0.0" },
 ]
 

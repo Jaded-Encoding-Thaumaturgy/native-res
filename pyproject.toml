@@ -9,6 +9,7 @@ description = "Descale analysis tools for VapourSynth"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "vsjetengine",
     "vsjetpack>=1.0.0",
     "jetpytools",
     "typer",
