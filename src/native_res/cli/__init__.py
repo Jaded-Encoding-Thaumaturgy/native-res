@@ -58,7 +58,9 @@ logger = getLogger(__name__)
 
 @native_app.command(
     cls=NativeCommand,
-    help="Determine the best (fractional) native resolution for an upscaled frame.",
+    help="[bold]Determine the native resolution of upscaled material.[/]\n\n"
+    "Analyzes a range of dimensions to find which one produces the lowest error when inverse scaled.\n"
+    "Primary use case is finding the native resolution of upscaled anime.",
     no_args_is_help=True,
 )
 def getfnative_cli(
@@ -143,7 +145,9 @@ def getfnative_cli(
 
 @scaler_app.command(
     cls=ScalerCommand,
-    help="Find the best inverse scaler for a given frame.",
+    help="[bold]Identify the best inverse scaler for a given resolution.[/]\n\n"
+    "Compares multiple kernels against a specific target resolution to determine which one "
+    "was likely used for the original upscaling.",
     epilog="""
 [dim]Notes:
 

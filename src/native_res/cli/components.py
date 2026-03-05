@@ -23,7 +23,7 @@ class NativeCommand(TyperCommand):
 
 class ScalerCommand(TyperCommand):
     def format_usage(self, ctx: Context, formatter: HelpFormatter) -> None:
-        formatter.write_usage("getfscaler", "INPUT WIDTH HEIGHT [OPTIONS]")
+        formatter.write_usage("getfscaler", "INPUT DIM [OPTIONS]")
 
 
 # DEBUG
@@ -44,62 +44,63 @@ global_debug_opt = Option(
 
 
 # Apps
-native_app = Typer(
-    name="getfnative",
-    help="Determine the native (fractional) resolution of upscaled material (primarily anime).",
-    rich_markup_mode="rich",
-    pretty_exceptions_enable=False,
-    add_completion=False,
-)
-scaler_app = Typer(
-    name="getfscaler",
-    help="Identify the best inverse scaler for a single frame.",
-    rich_markup_mode="rich",
-    pretty_exceptions_enable=False,
-    add_completion=False,
-)
+native_app = Typer(name="getfnative", rich_markup_mode="rich", pretty_exceptions_enable=False, add_completion=False)
+scaler_app = Typer(name="getfscaler", pretty_exceptions_enable=False, add_completion=False)
 
 
 # Commons
 input_file_arg = Argument(
-    help="Path to input file; video, image or script (output 0). ",
+    help="Path to the source material to analyze.\n\n"
+    "Supports videos, images, or VapourSynth scripts.\n\n"
+    "For scripts, the first output is used.",
     metavar="INPUT",
     resolve_path=True,
     parser=SPath,
 )
-frame_opt = Option("--frame", "-f", help="Frame number to analyze (for video inputs).", metavar="INTEGER")
+frame_opt = Option(
+    "--frame",
+    "-f",
+    help="The specific frame number to extract and analyze from video inputs. Ignored for images.",
+    metavar="INTEGER",
+)
 kernel_opt = Option(
     "--kernel",
     "-k",
-    help="Select or add a custom kernel.",
-    metavar="Kernel|KernelName(arg0=..., arg1=...)",
+    help="The kernel(s) to use for inverse scaling.\n\n"
+    "Can be a kernel name or a class call with parameters (e.g., 'Bicubic(b=0, c=0.5)').\n\n"
+    "Use --show-kernels for a list of available kernels.",
+    metavar="Kernel|Kernel(arg0=..., arg1=...)",
     parser=resolve_kernel,
 )
 
 dim_mode_opt = Option(
     "--dim-mode",
     "-dm",
-    help="The dimension to check.",
+    help="Specifies whether to analyze based on the [bold]height[/] or [bold]width[/] of the frame.",
     metavar="height|width|h|w",
     parser=resolve_dimension_mode,
 )
 crop_opt = Option(
     "--crop",
     "-c",
-    help="Crop as (left right top bottom) to remove borders before analysis.",
+    help="Crop the input frame before analysis to remove black bars.\n\n"
+    "Format: [bold]LEFT RIGHT TOP BOTTOM[/] (e.g., '0 0 240 240').",
     metavar="L R T B",
 )
 metric_mode_opt = Option(
     "--metric-mode",
     "-mm",
-    help="The metric mode to use",
+    help="The mathematical metric used to compare scaling results.\n\n"
+    "- [bold]MAE[/] (Mean Absolute Error)\n\n"
+    "- [bold]MSE[/] (Mean Squared Error)\n\n"
+    "- [bold]RMSE[/] (Root Mean Squared Error)",
     metavar="MAE|MSE|RMSE",
     parser=lambda value: value.upper(),
 )
 indexer_opt = Option(
     "--indexer",
     "-idx",
-    help="Indexer backend to use.",
+    help="The VapourSynth indexer used to load files.\n\nSpecifying the plugin namespace is also allowed (e.g., 'bs').",
     metavar="STRING",
     parser=resolve_idx,
     show_default="BestSource",
@@ -107,35 +108,35 @@ indexer_opt = Option(
 
 # Helpers
 show_default_kernels_opt = Option(
-    "--show-default-kernels",
+    "--show-kernels",
     help="Show the default kernels and exit.",
     is_eager=True,
     show_default=False,
     callback=show_default_kernels,
 )
 show_vskernels_opt = Option(
-    "--show-kernels",
-    help="Show the builtin kernels and exit.",
+    "--show-vskernels",
+    help="Show the builtin supported kernels from vskernels and exit.",
     is_eager=True,
     show_default=False,
-    callback=show_builtin_kernels,
+    callback=show_vskernels,
 )
 
 # getfnative exclusive
 range_dim_opt = Option(
     "--range-dim",
     "-rd",
-    help="Inclusive range of dimension to check.",
+    help="The inclusive range of resolutions to test.\n\nSpecify as [bold]START END[/] (e.g., '500 1080').",
     metavar="INTEGER INTEGER",
     show_default=False,
 )
-step_opt = Option("--step", "-s", help="Positive number that specifies the increment.", metavar="NUMBER")
+step_opt = Option("--step", "-s", help="The increment step between resolutions in the tested range.", metavar="NUMBER")
 
 
 # getfscaler exclusive
 dim_opt = Argument(
-    help="Approximate native dimension value. "
-    "Use integer for exact pixels or fractional number for sub-pixel dimensions.",
+    help="The suspected native resolution to verify. "
+    "Use an integer for exact pixels (e.g., 720) or a float for sub-pixel dimensions (e.g., 719.8).",
     metavar="NUMBER",
     parser=resolve_dimension,
 )
@@ -147,7 +148,8 @@ base_dim_opt = Option(
 mask_opt = Option(
     "--mask",
     "-m",
-    help="Edge-detection mask to reduce noise influence on the metric. Pass a mask name or class.",
+    help="Edge-detection mask to reduce noise influence on the metric. "
+    "Pass a mask name (e.g., 'Prewitt') or a class name from vsmasktools.",
     metavar="EDGEDETECT",
     parser=EdgeDetect.from_param,
 )
