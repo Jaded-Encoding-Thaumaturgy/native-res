@@ -1,5 +1,6 @@
 """CLI module"""
 
+import sys
 import warnings
 from itertools import zip_longest
 from logging import DEBUG, INFO, basicConfig, captureWarnings, getLogger
@@ -78,8 +79,9 @@ def getfnative_cli(
     _global_debug: Annotated[bool, global_debug_opt] = False,
 ) -> None:
     import numpy as np
+    from PySide6.QtWidgets import QApplication
 
-    from ..plotting import make_plot
+    from ..plotting import StandalonePlotWindow
 
     clip = get_videonode_from_input(input_file, indexer, frame, console)
 
@@ -139,8 +141,16 @@ def getfnative_cli(
 
     dims, errors = zip(*results)
 
-    # Pop out a matplot
-    make_plot([getattr(d, dim_mode) for d in dims], errors, dim_mode, f"Error plot - {kernel} on {dim_mode}")
+    # Show the plot window
+    app = QApplication(sys.argv)
+    win = StandalonePlotWindow(
+        f"Error plot - {kernel.pretty_string} on {dim_mode}",
+        [getattr(d, dim_mode) for d in dims],
+        errors,
+        dim_mode,
+    )
+    win.show()
+    app.exec()
 
 
 @scaler_app.command(

@@ -33,11 +33,15 @@ dev = [
     "vsstubs>=1.0.0.post1; python_version>='3.13'",
 ]
 
+[project.optional-dependencies]
+plugin = ["vsview-native-res"]
+
 [tool.uv.workspace]
 members = ["src/plugin"]
 
 [tool.uv.sources]
 vsjetpack = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack", branch = "hashable-scaler" }
+vsview-native-res = { workspace = true }
 
 [tool.hatch.build.targets.sdist]
 include = ["src/native_res", "README.md", "LICENSE", "pyproject.toml"]
