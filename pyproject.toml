@@ -36,6 +36,9 @@ dev = [
 [tool.uv.workspace]
 members = ["src/plugin"]
 
+[tool.uv.sources]
+vsjetpack = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack", branch = "hashable-scaler" }
+
 [tool.hatch.build.targets.sdist]
 include = ["src/native_res", "README.md", "LICENSE", "pyproject.toml"]
 

@@ -170,9 +170,11 @@ def getfscaler(
     if clip.num_frames != 1:
         raise CustomOverflowError("Clip must have only one frame", func)
 
+    resolved_kernels = {ComplexKernel.ensure_obj(k, func) for k in to_arr(kernels)}  # type:ignore[arg-type]
+
     return [
         GetScalerResult(
-            (kernel := ComplexKernel.ensure_obj(k, func)),  # type:ignore[arg-type]
+            kernel,
             get_descale_error(
                 clip,
                 width,
@@ -188,7 +190,7 @@ def getfscaler(
                 **kwargs,
             ),
         )
-        for k in to_arr(kernels)
+        for kernel in resolved_kernels
     ]
 
 
