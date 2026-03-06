@@ -17,7 +17,7 @@ logger = getLogger(__name__)
 _point_resize = Point()
 
 
-class _ResolutionFrac(NamedTuple):
+class ResolutionFrac(NamedTuple):
     """Fractional resolution expressed as floating-point width and height."""
 
     width: float
@@ -27,11 +27,11 @@ class _ResolutionFrac(NamedTuple):
     """Vertical size (may be fractional)."""
 
 
-class _GetNativeResult(NamedTuple):
+class GetNativeResult(NamedTuple):
     """Result for `getfnative`, pairing a fractional resolution with an error metric."""
 
-    dim: _ResolutionFrac
-    """The tested fractional resolution as an `_ResolutionFrac`."""
+    dim: ResolutionFrac
+    """The tested fractional resolution as an `ResolutionFrac`."""
 
     error: float
     """Computed error for this resolution (higher means worse)."""
@@ -49,7 +49,7 @@ def getfnative(
     *,
     func: FuncExcept | None = None,
     **kwargs: Any,
-) -> list[_GetNativeResult]:
+) -> list[GetNativeResult]:
     """
     Determine the best (fractional) native resolution for an upscaled frame.
 
@@ -74,7 +74,7 @@ def getfnative(
         CustomOverflowError: If `clip` does not contain exactly one frame.
 
     Returns:
-        A list of `_GetNativeResult` items.
+        A list of `GetNativeResult` items.
         Each item contains the tested fractional resolution (`dim`) and its associated `error`.
     """
     func = func or getfnative
@@ -104,13 +104,13 @@ def getfnative(
     errors = clip_data_gather(rescaled, progress_cb, lambda _, f: get_prop(f, "PlaneStatsAverage", float))
 
     try:
-        return [_GetNativeResult(_ResolutionFrac(*d), e) for d, e in zip(dimensions, errors)]
+        return [GetNativeResult(ResolutionFrac(*d), e) for d, e in zip(dimensions, errors)]
     finally:
         for r in rescale_list:
             r.__vs_del__(-1)
 
 
-class _GetScalerResult(NamedTuple):
+class GetScalerResult(NamedTuple):
     """Result for `getfscaler`, pairing a kernel with its error."""
 
     kernel: ComplexKernel
@@ -135,7 +135,7 @@ def getfscaler(
     *,
     func: FuncExcept | None = None,
     **kwargs: Any,
-) -> list[_GetScalerResult]:
+) -> list[GetScalerResult]:
     """
     Find the best inverse scaler (kernel) for a given single-frame clip.
 
@@ -163,7 +163,7 @@ def getfscaler(
         CustomOverflowError: If `clip` does not contain exactly one frame.
 
     Returns:
-        A list of `_GetScalerResult` items. Each item contains the evaluated `kernel` and its associated `error`.
+        A list of `GetScalerResult` items. Each item contains the evaluated `kernel` and its associated `error`.
     """
     func = func or getfscaler
 
@@ -171,7 +171,7 @@ def getfscaler(
         raise CustomOverflowError("Clip must have only one frame", func)
 
     return [
-        _GetScalerResult(
+        GetScalerResult(
             (kernel := ComplexKernel.ensure_obj(k, func)),  # type:ignore[arg-type]
             get_descale_error(
                 clip,
