@@ -71,10 +71,6 @@ pretty = true
 color_output = true
 error_summary = true
 
-[[tool.mypy.overrides]]
-module = "pyqtgraph.*"
-ignore_missing_imports = true
-
 [tool.ruff]
 line-length = 120
 
