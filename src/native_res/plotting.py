@@ -25,15 +25,19 @@ class RescalePlotWidget(QChartView):
         dimension_mode: str,
         parent: QWidget | None = None,
     ) -> None:
-        chart = QChart(theme=QChart.ChartTheme.ChartThemeDark, title=title, margins=QMargins(50, 10, 10, 10))
+        chart = QChart(
+            theme=QChart.ChartTheme.ChartThemeDark,
+            title=title,
+            margins=QMargins(50, 10, 10, 10),
+        )
         chart.legend().hide()
         super().__init__(chart, parent)
 
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setMouseTracking(True)
 
-        self.dims_np = np.asarray(dims, np.float64)
-        self.errors_np = np.asarray(errors, np.float64)
+        self.dims = np.asarray(dims, np.float64)
+        self.errors = np.asarray(errors, np.float64)
         self.dimension_mode = dimension_mode
         self._is_panning = False
         self._last_mouse_pos = QPointF()
@@ -49,12 +53,12 @@ class RescalePlotWidget(QChartView):
             )
         )
         self.series.setPointsVisible(True)
-        if self.dims_np.size > 0:
-            self.series.appendNp(self.dims_np, self.errors_np)  # type: ignore[arg-type]
+        if self.dims.size > 0:
+            self.series.appendNp(self.dims, self.errors)  # type: ignore[arg-type]
         chart.addSeries(self.series)
 
         self.series.setPointsConfiguration(
-            {i: {QLineSeries.PointConfiguration.Size: 2.5} for i in range(self.dims_np.size)}
+            {i: {QLineSeries.PointConfiguration.Size: 2.5} for i in range(self.dims.size)}
         )
 
         # Setup X Axis (Linear)
@@ -63,8 +67,8 @@ class RescalePlotWidget(QChartView):
         chart.addAxis(self.axis_x, Qt.AlignmentFlag.AlignBottom)
         self.series.attachAxis(self.axis_x)
 
-        if self.dims_np.size > 0:
-            x_min, x_max = self.dims_np.min(), self.dims_np.max()
+        if self.dims.size > 0:
+            x_min, x_max = self.dims.min(), self.dims.max()
             pad = (x_max - x_min) * 0.05 if x_max != x_min else 1.0
             self.initial_x_range = (x_min - pad, x_max + pad)
             self.axis_x.setRange(*self.initial_x_range)
@@ -77,9 +81,9 @@ class RescalePlotWidget(QChartView):
         chart.addAxis(self.axis_y, Qt.AlignmentFlag.AlignLeft)
         self.series.attachAxis(self.axis_y)
 
-        if self.errors_np.size > 0:
-            y_min = max(self.errors_np.min(), 1e-15)
-            y_max = self.errors_np.max()
+        if self.errors.size > 0:
+            y_min = max(self.errors.min(), 1e-15)
+            y_max = self.errors.max()
             self.initial_y_range = (y_min * 0.5, y_max * 2.0)
             self.axis_y.setRange(*self.initial_y_range)
         else:
@@ -180,16 +184,16 @@ class RescalePlotWidget(QChartView):
         super().mouseMoveEvent(event)
         area = chart.plotArea()
 
-        if not area.contains(pos) or self.dims_np.size <= 0:
+        if not area.contains(pos) or self.dims.size <= 0:
             return self._set_overlays_visible(False)
 
         val = chart.mapToValue(pos)
 
         # Lookup for nearest data point
-        idx = np.clip(self.dims_np.searchsorted(val.x()), 1, self.dims_np.size - 1)
-        best_idx = idx if abs(self.dims_np[idx] - val.x()) < abs(self.dims_np[idx - 1] - val.x()) else idx - 1
+        idx = np.clip(self.dims.searchsorted(val.x()), 1, self.dims.size - 1)
+        best_idx = idx if abs(self.dims[idx] - val.x()) < abs(self.dims[idx - 1] - val.x()) else idx - 1
 
-        x, y = self.dims_np[best_idx], self.errors_np[best_idx]
+        x, y = self.dims[best_idx], self.errors[best_idx]
         point = chart.mapToPosition(QPointF(x, y))
 
         # Update crosshairs to snap to the data point
@@ -260,7 +264,7 @@ class RescalePlotWidget(QChartView):
         if path:
             data = {
                 "dimension_mode": self.dimension_mode,
-                "data": [{"x": float(x), "y": float(y)} for x, y in zip(self.dims_np, self.errors_np)],
+                "data": [{"x": float(x), "y": float(y)} for x, y in zip(self.dims, self.errors)],
             }
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
@@ -273,7 +277,7 @@ class RescalePlotWidget(QChartView):
             with open(path, "w", encoding="utf-8", newline="") as fh:
                 writer = csv.writer(fh)
                 writer.writerow([f"{self.dimension_mode}", "Error"])
-                writer.writerows(zip(self.dims_np, self.errors_np))
+                writer.writerows(zip(self.dims, self.errors))
 
             logger.info("Exported CSV to %s", path)
 
