@@ -79,9 +79,9 @@ def getfnative_cli(
     _global_debug: Annotated[bool, global_debug_opt] = False,
 ) -> None:
     import numpy as np
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication, QMainWindow, QStyle
 
-    from ..plotting import StandalonePlotWindow
+    from ..plotting import RescalePlotWidget
 
     clip = get_videonode_from_input(input_file, indexer, frame, console)
 
@@ -143,12 +143,20 @@ def getfnative_cli(
 
     # Show the plot window
     app = QApplication(sys.argv)
-    win = StandalonePlotWindow(
+    win = QMainWindow()
+    win.setWindowTitle("Native Resolution Analysis")
+    win.setWindowIcon(win.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView))
+    win.resize(1000, 600)
+
+    plot = RescalePlotWidget(
         f"Error plot - {kernel.pretty_string} on {dim_mode}",
         [getattr(d, dim_mode) for d in dims],
         errors,
-        dim_mode,
+        dim_mode.title(),
     )
+
+    win.setCentralWidget(plot)
+
     win.show()
     app.exec()
 

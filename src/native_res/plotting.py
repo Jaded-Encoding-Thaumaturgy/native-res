@@ -1,47 +1,296 @@
+import csv
+import json
 from collections.abc import Sequence
-from contextlib import suppress
-from importlib.util import find_spec
 from logging import getLogger
+from typing import Literal
 
-import pyqtgraph as pg
-from pyqtgraph.exporters import Exporter, MatplotlibExporter
-from PySide6.QtWidgets import QMainWindow, QStyle, QVBoxLayout, QWidget
+import numpy as np
+from PySide6.QtCharts import QChart, QChartView, QLineSeries, QLogValueAxis, QValueAxis
+from PySide6.QtCore import QMargins, QPointF, Qt
+from PySide6.QtGui import QAction, QContextMenuEvent, QMouseEvent, QPainter, QPalette, QPen, QResizeEvent, QWheelEvent
+from PySide6.QtSvg import QSvgGenerator
+from PySide6.QtWidgets import QFileDialog, QGraphicsLineItem, QGraphicsTextItem, QMenu, QWidget
+
+type FloatArray1D = Sequence[float] | np.ndarray[tuple[Literal[1]], np.dtype[np.floating]]
 
 logger = getLogger(__name__)
 
-if find_spec("matplotlib") is None:
-    # Remove MatplotlibExporter from pyqtgraph's list so it doesn't show in the Export dialog
-    with suppress(ValueError):
-        Exporter.Exporters.remove(MatplotlibExporter)
 
+class RescalePlotWidget(QChartView):
+    def __init__(
+        self,
+        title: str,
+        dims: FloatArray1D,
+        errors: FloatArray1D,
+        dimension_mode: str,
+        parent: QWidget | None = None,
+    ) -> None:
+        chart = QChart(theme=QChart.ChartTheme.ChartThemeDark, title=title, margins=QMargins(50, 10, 10, 10))
+        chart.legend().hide()
+        super().__init__(chart, parent)
 
-class StandalonePlotWindow(QMainWindow):
-    def __init__(self, title: str, dims: Sequence[float], errors: Sequence[float], dimension_mode: str) -> None:
-        super().__init__()
-        self.setWindowTitle(title)
-        self.setWindowIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView))
-        self.resize(900, 500)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setMouseTracking(True)
 
-        self.dims = dims
-        self.errors = errors
+        self.dims_np = np.asarray(dims, np.float64)
+        self.errors_np = np.asarray(errors, np.float64)
         self.dimension_mode = dimension_mode
+        self._is_panning = False
+        self._last_mouse_pos = QPointF()
 
-        central = QWidget(self)
-        self.setCentralWidget(central)
-        main_layout = QVBoxLayout(central)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        self.series = QLineSeries(self)
+        self.series.setPen(
+            QPen(
+                self.palette().color(QPalette.ColorRole.BrightText),
+                1.0,
+                Qt.PenStyle.SolidLine,
+                Qt.PenCapStyle.SquareCap,
+                Qt.PenJoinStyle.MiterJoin,
+            )
+        )
+        self.series.setPointsVisible(True)
+        if self.dims_np.size > 0:
+            self.series.appendNp(self.dims_np, self.errors_np)  # type: ignore[arg-type]
+        chart.addSeries(self.series)
 
-        self.plot_widget = pg.PlotWidget(self, title=f"Error vs {dimension_mode}", background=None)  # pyright: ignore[reportArgumentType]
-        self.plot_widget.setLogMode(y=True)
-        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_widget.setLabel("left", "Error")
-        self.plot_widget.setLabel("bottom", dimension_mode)
-        self.plot_widget.plot(
-            list(dims),
-            list(errors),
-            pen=pg.mkPen(width=1.5),
-            symbol="o",
-            symbolSize=5,
+        self.series.setPointsConfiguration(
+            {i: {QLineSeries.PointConfiguration.Size: 2.5} for i in range(self.dims_np.size)}
         )
 
-        main_layout.addWidget(self.plot_widget)
+        # Setup X Axis (Linear)
+        self.axis_x = QValueAxis(self)
+        self.axis_x.setTitleText(dimension_mode)
+        chart.addAxis(self.axis_x, Qt.AlignmentFlag.AlignBottom)
+        self.series.attachAxis(self.axis_x)
+
+        if self.dims_np.size > 0:
+            x_min, x_max = self.dims_np.min(), self.dims_np.max()
+            pad = (x_max - x_min) * 0.05 if x_max != x_min else 1.0
+            self.initial_x_range = (x_min - pad, x_max + pad)
+            self.axis_x.setRange(*self.initial_x_range)
+        else:
+            self.initial_x_range = (0.0, 10.0)
+
+        # Setup Y Axis (Logarithmic)
+        self.axis_y = QLogValueAxis(self, base=10.0, minorTickCount=4)
+        self.axis_y.setTitleVisible(False)
+        chart.addAxis(self.axis_y, Qt.AlignmentFlag.AlignLeft)
+        self.series.attachAxis(self.axis_y)
+
+        if self.errors_np.size > 0:
+            y_min = max(self.errors_np.min(), 1e-15)
+            y_max = self.errors_np.max()
+            self.initial_y_range = (y_min * 0.5, y_max * 2.0)
+            self.axis_y.setRange(*self.initial_y_range)
+        else:
+            self.initial_y_range = (1e-15, 1.0)
+
+        # Custom horizontal Y title
+        self.axis_y_title = QGraphicsTextItem("Error", chart)
+        self.axis_y_title.setZValue(5)
+        title_font = self.axis_y.titleFont()
+        title_font.setBold(True)
+        self.axis_y_title.setFont(title_font)
+        self.axis_y_title.setDefaultTextColor(self.palette().color(QPalette.ColorRole.Text))
+
+        # Crosshair overlays
+        cross_color = self.palette().color(QPalette.ColorRole.ToolTipText)
+        cross_color.setAlphaF(0.8)
+        cross_pen = QPen(cross_color, 1, Qt.PenStyle.DashLine)
+        self.v_line = QGraphicsLineItem(chart)
+        self.v_line.setPen(cross_pen)
+        self.v_line.setZValue(10)
+
+        self.h_line = QGraphicsLineItem(chart)
+        self.h_line.setPen(cross_pen)
+        self.h_line.setZValue(10)
+
+        # Tooltip-style hover label
+        self.label = QGraphicsTextItem(chart)
+        self.label.setZValue(11)
+
+        self._set_overlays_visible(False)
+
+        self.menu = QMenu(self)
+
+        self.reset_action = QAction("Reset Zoom", self)
+        self.reset_action.triggered.connect(self.reset_zoom)
+        self.menu.addAction(self.reset_action)
+
+        self.menu.addSeparator()
+
+        self.export_menu = self.menu.addMenu("Export")
+
+        self.png_action = QAction("Export as PNG", self)
+        self.png_action.triggered.connect(self.export_png)
+        self.export_menu.addAction(self.png_action)
+
+        self.svg_action = QAction("Export as SVG", self)
+        self.svg_action.triggered.connect(self.export_svg)
+        self.export_menu.addAction(self.svg_action)
+
+        self.json_action = QAction("Export as JSON", self)
+        self.json_action.triggered.connect(self.export_json)
+        self.export_menu.addAction(self.json_action)
+
+        self.csv_action = QAction("Export as CSV", self)
+        self.csv_action.triggered.connect(self.export_csv)
+        self.export_menu.addAction(self.csv_action)
+
+        logger.debug("RescalePlotWidget %r initialized", title)
+
+    @property
+    def is_panning(self) -> bool:
+        return self._is_panning
+
+    def contextMenuEvent(self, event: QContextMenuEvent) -> None:
+        self.menu.exec(event.globalPos())
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._is_panning = True
+            self._last_mouse_pos = event.position()
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            self._set_overlays_visible(False)
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event: QMouseEvent) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._is_panning = False
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            # Re-trigger move event to restore crosshair immediately
+            self.mouseMoveEvent(event)
+            event.accept()
+        else:
+            super().mouseReleaseEvent(event)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        pos = event.position()
+        chart = self.chart()
+
+        if self._is_panning:
+            delta = pos - self._last_mouse_pos
+            chart.scroll(-delta.x(), delta.y())
+            self._last_mouse_pos = pos
+            event.accept()
+            return
+
+        super().mouseMoveEvent(event)
+        area = chart.plotArea()
+
+        if not area.contains(pos) or self.dims_np.size <= 0:
+            return self._set_overlays_visible(False)
+
+        val = chart.mapToValue(pos)
+
+        # Lookup for nearest data point
+        idx = np.clip(self.dims_np.searchsorted(val.x()), 1, self.dims_np.size - 1)
+        best_idx = idx if abs(self.dims_np[idx] - val.x()) < abs(self.dims_np[idx - 1] - val.x()) else idx - 1
+
+        x, y = self.dims_np[best_idx], self.errors_np[best_idx]
+        point = chart.mapToPosition(QPointF(x, y))
+
+        # Update crosshairs to snap to the data point
+        self.v_line.setLine(point.x(), area.top(), point.x(), area.bottom())
+        self.h_line.setLine(area.left(), point.y(), area.right(), point.y())
+
+        palette = self.palette()
+        bg = palette.color(QPalette.ColorRole.Window).name()
+        fg = palette.color(QPalette.ColorRole.WindowText).name()
+        border = palette.color(QPalette.ColorRole.Highlight).name()
+
+        self.label.setHtml(
+            f"<div style='background-color: {bg}; color: {fg}; border: 1px solid {border}; "
+            f"border-radius: 4px; padding: 4px; font-family: sans-serif;'>"
+            f"<b>{self.dimension_mode}:</b> {x:g}<br>"
+            f"<b>Error:</b> {y:.10f}</div>"
+        )
+
+        # Avoid tooltip occlusion at chart edges
+        lx, ly = point.x() + 15, point.y() - 45
+        if lx + 160 > area.right():  # 160 is estimated tooltip width
+            lx = point.x() - 165
+        if ly < area.top():
+            ly = point.y() + 15
+
+        self.label.setPos(lx, ly)
+        self._set_overlays_visible(True)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self._update_axis_titles()
+
+    def wheelEvent(self, event: QWheelEvent) -> None:
+        if event.angleDelta().y() > 0:
+            self.chart().zoomIn()
+        else:
+            self.chart().zoomOut()
+        event.accept()
+
+    def reset_zoom(self) -> None:
+        self.axis_x.setRange(*self.initial_x_range)
+        self.axis_y.setRange(*self.initial_y_range)
+
+    def export_png(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Export PNG", "", "PNG Files (*.png)")
+        if path:
+            pixmap = self.grab()
+            pixmap.save(path, "PNG")
+            logger.info("Exported PNG to %s", path)
+
+    def export_svg(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Export SVG", "", "SVG Files (*.svg)")
+        if path:
+            generator = QSvgGenerator(
+                size=self.size(),
+                viewBox=self.rect().toRectF(),
+                title=self.chart().title(),
+                fileName=path,
+            )
+
+            with QPainter(generator) as painter:
+                self.render(painter)
+
+            logger.info("Exported SVG to %s", path)
+
+    def export_json(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Export JSON", "", "JSON Files (*.json)")
+        if path:
+            data = {
+                "dimension_mode": self.dimension_mode,
+                "data": [{"x": float(x), "y": float(y)} for x, y in zip(self.dims_np, self.errors_np)],
+            }
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+
+            logger.info("Exported JSON to %s", path)
+
+    def export_csv(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
+        if path:
+            with open(path, "w", encoding="utf-8", newline="") as fh:
+                writer = csv.writer(fh)
+                writer.writerow([f"{self.dimension_mode}", "Error"])
+                writer.writerows(zip(self.dims_np, self.errors_np))
+
+            logger.info("Exported CSV to %s", path)
+
+    def _set_overlays_visible(self, visible: bool) -> None:
+        self.v_line.setVisible(visible)
+        self.h_line.setVisible(visible)
+        self.label.setVisible(visible)
+
+    def _update_axis_titles(self) -> None:
+        if not (area := self.chart().plotArea()).isValid():
+            return
+
+        # Position the horizontal Y-axis title in the left margin
+        # Center x horizontally in the left margin (area.left())
+        # Center y vertically relative to the plot area
+        rect = self.axis_y_title.boundingRect()
+        self.axis_y_title.setPos(
+            (area.left() - rect.width()) / 2,
+            area.top() + (area.height() - rect.height()) / 2,
+        )

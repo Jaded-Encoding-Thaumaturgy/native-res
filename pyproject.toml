@@ -14,7 +14,6 @@ dependencies = [
     "vsjetpack>=1.0.0",
     "typer>=0.24.0",
     "rich",
-    "pyqtgraph>=0.14.0",
     "pyside6>=6.10.1",
     "numpy>=2.0.0",
     "scipy>=1.16.0",
@@ -53,7 +52,6 @@ packages = ["src/native_res"]
 [tool.mypy]
 mypy_path = "$MYPY_CONFIG_FILE_DIR/stubs"
 
-# exclude = ["stubs/vapoursynth"]
 exclude_gitignore = true
 
 # Flags changed by --strict
@@ -97,6 +95,7 @@ extend-select = [
     "FURB",
     "RUF",
 ]
+ignore = ["N802", "N815"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.*" = ["F401", "F403"]
