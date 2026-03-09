@@ -48,7 +48,7 @@ warnings.filterwarnings("always")
 captureWarnings(True)
 basicConfig(
     level=INFO,
-    handlers=[RichHandler(level=DEBUG, console=console)],
+    handlers=[RichHandler(console=console)],
     format="{name}: {message}",
     style="{",
 )
