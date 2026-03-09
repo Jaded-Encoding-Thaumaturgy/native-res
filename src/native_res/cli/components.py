@@ -18,12 +18,12 @@ from .helpers import (
 
 class NativeCommand(TyperCommand):
     def format_usage(self, ctx: Context, formatter: HelpFormatter) -> None:
-        formatter.write_usage("getfnative", "INPUT [OPTIONS]")
+        formatter.write_usage(ctx.command_path, "INPUT [OPTIONS]")
 
 
 class ScalerCommand(TyperCommand):
     def format_usage(self, ctx: Context, formatter: HelpFormatter) -> None:
-        formatter.write_usage("getfscaler", "INPUT DIM [OPTIONS]")
+        formatter.write_usage(ctx.command_path, "INPUT DIM [OPTIONS]")
 
 
 # DEBUG
@@ -43,16 +43,19 @@ global_debug_opt = Option(
 )
 
 
-# Apps
-native_app = Typer(name="getfnative", rich_markup_mode="rich", pretty_exceptions_enable=False, add_completion=False)
-scaler_app = Typer(name="getfscaler", pretty_exceptions_enable=False, add_completion=False)
-
+# App
+app = Typer(
+    name="native-res",
+    rich_markup_mode="rich",
+    pretty_exceptions_enable=True,
+    add_completion=False,
+    no_args_is_help=True,
+)
 
 # Commons
 input_file_arg = Argument(
-    help="Path to the source material to analyze.\n\n"
-    "Supports videos, images, or VapourSynth scripts.\n\n"
-    "For scripts, the first output is used.",
+    help="Path to the source material to analyze."
+    "Supports videos, images, or VapourSynth scripts. For scripts, the first output is used.",
     metavar="INPUT",
     resolve_path=True,
     parser=SPath,

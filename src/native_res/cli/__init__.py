@@ -21,6 +21,7 @@ from ..funcs import getfnative, getfscaler
 from .components import (
     NativeCommand,
     ScalerCommand,
+    app,
     base_dim_opt,
     crop_opt,
     debug_opt,
@@ -33,9 +34,7 @@ from .components import (
     kernel_opt,
     mask_opt,
     metric_mode_opt,
-    native_app,
     range_dim_opt,
-    scaler_app,
     show_default_kernels_opt,
     show_vskernels_opt,
     step_opt,
@@ -57,14 +56,14 @@ basicConfig(
 logger = getLogger(__name__)
 
 
-@native_app.command(
+@app.command(
     cls=NativeCommand,
     help="[bold]Determine the native resolution of upscaled material.[/]\n\n"
     "Analyzes a range of dimensions to find which one produces the lowest error when inverse scaled.\n"
     "Primary use case is finding the native resolution of upscaled anime.",
     no_args_is_help=True,
 )
-def getfnative_cli(
+def getnative(
     input_file: Annotated[SPath, input_file_arg],
     range_dim: Annotated[tuple[int, int] | None, range_dim_opt] = None,
     dim_mode: Annotated[Literal["height", "width"], dim_mode_opt] = "height",
@@ -161,7 +160,7 @@ def getfnative_cli(
     app.exec()
 
 
-@scaler_app.command(
+@app.command(
     cls=ScalerCommand,
     help="[bold]Identify the best inverse scaler for a given resolution.[/]\n\n"
     "Compares multiple kernels against a specific target resolution to determine which one "
@@ -175,7 +174,7 @@ def getfnative_cli(
 """,
     no_args_is_help=True,
 )
-def getfscaler_cli(
+def getscaler(
     input_file: Annotated[SPath, input_file_arg],
     dim: Annotated[float, dim_opt],
     dim_mode: Annotated[Literal["height", "width"], dim_mode_opt] = "height",
