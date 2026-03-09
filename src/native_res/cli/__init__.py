@@ -197,7 +197,9 @@ def getscaler(
     clip = get_videonode_from_input(input_file, indexer, frame, console)
 
     # Resolve dimension to check
-    scaler_args: dict[str, Any] = {"width": clip.width, "height": clip.height} | {
+    scaler_args: dict[str, Any] = {
+        "width": clip.width,
+        "height": clip.height,
         dim_mode: dim,
         f"base_{dim_mode}": base_dim_opt,
     }
