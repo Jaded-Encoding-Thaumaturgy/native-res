@@ -20,10 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-getfnative = "native_res.cli:native_app"
-getnative = "native_res.cli:native_app"
-getfscaler = "native_res.cli:scaler_app"
-getscaler = "native_res.cli:scaler_app"
+native-res = "native_res.cli:app"
 
 [dependency-groups]
 dev = [

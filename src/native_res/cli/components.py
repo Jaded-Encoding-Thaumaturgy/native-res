@@ -65,6 +65,7 @@ frame_opt = Option(
     "-f",
     help="The specific frame number to extract and analyze from video inputs. Ignored for images.",
     metavar="INTEGER",
+    rich_help_panel="Common",
 )
 kernel_opt = Option(
     "--kernel",
@@ -74,6 +75,7 @@ kernel_opt = Option(
     "Use --show-kernels for a list of available kernels.",
     metavar="Kernel|Kernel(arg0=..., arg1=...)",
     parser=resolve_kernel,
+    rich_help_panel="Common",
 )
 
 dim_mode_opt = Option(
@@ -82,6 +84,7 @@ dim_mode_opt = Option(
     help="Specifies whether to analyze based on the [bold]height[/] or [bold]width[/] of the frame.",
     metavar="height|width|h|w",
     parser=resolve_dimension_mode,
+    rich_help_panel="Common",
 )
 crop_opt = Option(
     "--crop",
@@ -89,6 +92,7 @@ crop_opt = Option(
     help="Crop the input frame before analysis to remove black bars.\n\n"
     "Format: [bold]LEFT RIGHT TOP BOTTOM[/] (e.g., '0 0 240 240').",
     metavar="L R T B",
+    rich_help_panel="Common",
 )
 metric_mode_opt = Option(
     "--metric-mode",
@@ -99,6 +103,7 @@ metric_mode_opt = Option(
     "- [bold]RMSE[/] (Root Mean Squared Error)",
     metavar="MAE|MSE|RMSE",
     parser=lambda value: value.upper(),
+    rich_help_panel="Common",
 )
 indexer_opt = Option(
     "--indexer",
@@ -107,15 +112,17 @@ indexer_opt = Option(
     metavar="STRING",
     parser=resolve_idx,
     show_default="BestSource",
+    rich_help_panel="Common",
 )
 
 # Helpers
 show_default_kernels_opt = Option(
     "--show-kernels",
-    help="Show the default kernels and exit.",
+    help="Show the default checked kernels for getscaler and exit.",
     is_eager=True,
     show_default=False,
     callback=show_default_kernels,
+    rich_help_panel="Helpers",
 )
 show_vskernels_opt = Option(
     "--show-vskernels",
@@ -123,6 +130,7 @@ show_vskernels_opt = Option(
     is_eager=True,
     show_default=False,
     callback=show_vskernels,
+    rich_help_panel="Helpers",
 )
 
 # getfnative exclusive

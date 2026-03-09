@@ -56,6 +56,17 @@ basicConfig(
 logger = getLogger(__name__)
 
 
+@app.callback()
+def callback(
+    show_kernels: Annotated[bool, show_default_kernels_opt] = False,
+    show_vskernels: Annotated[bool, show_vskernels_opt] = False,
+    debug: Annotated[bool, debug_opt] = False,
+    global_debug: Annotated[bool, global_debug_opt] = False,
+) -> None:
+    """Descale analysis tools for VapourSynth."""
+    ...
+
+
 @app.command(
     cls=NativeCommand,
     help="[bold]Determine the native resolution of upscaled material.[/]\n\n"
@@ -73,9 +84,6 @@ def getnative(
     crop: Annotated[tuple[int, int, int, int] | None, crop_opt] = None,
     metric_mode: Annotated[Literal["MAE", "MSE", "RMSE"], metric_mode_opt] = "MAE",
     indexer: Annotated[Indexer, indexer_opt] = cast(Indexer, "bs"),
-    _show_vskernels: Annotated[bool, show_vskernels_opt] = False,
-    _debug: Annotated[bool, debug_opt] = False,
-    _global_debug: Annotated[bool, global_debug_opt] = False,
 ) -> None:
     import numpy as np
     from PySide6.QtWidgets import QApplication, QMainWindow, QStyle
@@ -185,10 +193,6 @@ def getscaler(
     metric_mode: Annotated[Literal["MAE", "MSE", "RMSE"], metric_mode_opt] = "MAE",
     mask: Annotated[type[EdgeDetect] | None, mask_opt] = None,
     indexer: Annotated[Indexer, indexer_opt] = cast(Indexer, "bs"),
-    _show_vskernels: Annotated[bool, show_vskernels_opt] = False,
-    _show_default_kernels: Annotated[bool, show_default_kernels_opt] = False,
-    _debug: Annotated[bool, debug_opt] = False,
-    _global_debug: Annotated[bool, global_debug_opt] = False,
 ) -> None:
     clip = get_videonode_from_input(input_file, indexer, frame, console)
 
