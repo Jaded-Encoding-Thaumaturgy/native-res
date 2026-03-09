@@ -9,7 +9,7 @@ from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn, Ti
 from typer import BadParameter, Exit
 from vskernels import ComplexKernel
 from vssource import BestSource, CacheIndexer, Indexer
-from vstools import Matrix, core, vs
+from vstools import Matrix, vs
 
 
 # Callbacks
@@ -129,10 +129,8 @@ def get_videonode_from_input(path: SPath, indexer: Indexer, frame: int, console:
 
         signal(SIGINT, SIG_DFL)
 
-    clip = indexer.source(path, 32, idx_props=False)
-
-    clip = core.resize.Bilinear(clip, format=vs.GRAYS, matrix=Matrix.BT709, matrix_in=Matrix.from_video(clip))
-    return clip[frame]
+    clip = indexer.source(path, 32, idx_props=False)[frame]
+    return clip.resize.Bilinear(format=vs.GRAYS, matrix=Matrix.BT709, matrix_in=Matrix.from_video(clip))
 
 
 def get_progress(console: Console) -> Progress:
