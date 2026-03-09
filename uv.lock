@@ -311,14 +311,14 @@ wheels = [
 
 [[package]]
 name = "optype"
-version = "0.16.0"
+version = "0.17.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/66/d3/c88bb4bd90867356275ca839499313851af4b36fce6919ebc5e1de26e7ca/optype-0.16.0.tar.gz", hash = "sha256:fa682fd629ef6b70ba656ebc9fdd6614ba06ce13f52e0416dd8014c7e691a2d1", size = 53498, upload-time = "2026-02-19T23:37:09.495Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/81/9f/3b13bab05debf685678b8af004e46b8c67c6f98ffa08eaf5d33bcf162c16/optype-0.17.0.tar.gz", hash = "sha256:31351a1e64d9eba7bf67e14deefb286e85c66458db63c67dd5e26dd72e4664e5", size = 53484, upload-time = "2026-03-08T23:03:12.594Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/91/a8/fe26515203cff140f1afc31236fb7f703d4bb4bd5679d28afcb3661c8d9f/optype-0.16.0-py3-none-any.whl", hash = "sha256:c28905713f55630b4bb8948f38e027ad13a541499ebcf957501f486da54b74d2", size = 65893, upload-time = "2026-02-19T23:37:08.217Z" },
+    { url = "https://files.pythonhosted.org/packages/6b/44/dca78187415947d1bb90b2ee2a58e47d9573528331e8dc6196996b53612a/optype-0.17.0-py3-none-any.whl", hash = "sha256:8c2d88ff13149454bcf6eb47502f80d288bc542e7238fcc412ac4d222c439397", size = 65854, upload-time = "2026-03-08T23:03:11.425Z" },
 ]
 
 [package.optional-dependencies]
@@ -334,6 +334,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/fa/36/e27608899f9b8d4dff0617b2d9ab17ca5608956ca44461ac14ac48b44015/pathspec-1.0.4.tar.gz", hash = "sha256:0210e2ae8a21a9137c0d470578cb0e595af87edaa6ebf12ff176f14a02e0e645", size = 131200, upload-time = "2026-01-27T03:59:46.938Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ef/3c/2c197d226f9ea224a9ab8d197933f9da0ae0aac5b6e0f884e2b8d9c8e9f7/pathspec-1.0.4-py3-none-any.whl", hash = "sha256:fb6ae2fd4e7c921a165808a552060e722767cfa526f99ca5156ed2ce45a5c723", size = 55206, upload-time = "2026-01-27T03:59:45.137Z" },
+]
+
+[[package]]
+name = "platformdirs"
+version = "4.9.4"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/19/56/8d4c30c8a1d07013911a8fdbd8f89440ef9f08d07a1b50ab8ca8be5a20f9/platformdirs-4.9.4.tar.gz", hash = "sha256:1ec356301b7dc906d83f371c8f487070e99d3ccf9e501686456394622a01a934", size = 28737, upload-time = "2026-03-05T18:34:13.271Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/63/d7/97f7e3a6abb67d8080dd406fd4df842c2be0efaf712d1c899c32a075027c/platformdirs-4.9.4-py3-none-any.whl", hash = "sha256:68a9a4619a666ea6439f2ff250c12a853cd1cbd5158d258bd824a7df6be2f868", size = 21216, upload-time = "2026-03-05T18:34:12.172Z" },
 ]
 
 [[package]]
@@ -589,14 +598,14 @@ wheels = [
 
 [[package]]
 name = "scipy-stubs"
-version = "1.17.1.0"
+version = "1.17.1.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "optype", extra = ["numpy"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d9/ad/413b0d18efca7bb48574d28e91253409d91ee6121e7937022d0d380dfc6a/scipy_stubs-1.17.1.0.tar.gz", hash = "sha256:5dc51c21765b145c2d132b96b63ff4f835dd5fb768006876d1554e7a59c61571", size = 381420, upload-time = "2026-02-23T10:33:04.742Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ec/c1/bf50e1cbf4015d4077835ffebea9a45dba7f5bf1cd781e931baff358cb20/scipy_stubs-1.17.1.1.tar.gz", hash = "sha256:e8f812a6eb298cfa3dd6b79a4af2b00fb4045f2ee28eadcc0eee8882208b5f1a", size = 383682, upload-time = "2026-03-08T21:49:40.976Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6c/ee/c6811e04ff9d5dd1d92236e8df7ebc4db6aa65c70b9938cec293348b8ec4/scipy_stubs-1.17.1.0-py3-none-any.whl", hash = "sha256:5c9c84993d36b104acb2d187b05985eb79f73491c60d83292dd738093d53d96a", size = 587059, upload-time = "2026-02-23T10:33:02.845Z" },
+    { url = "https://files.pythonhosted.org/packages/f6/23/15d568084d57cc99ba9f662f06c0fa647348b809df28bef1907aa8149eec/scipy_stubs-1.17.1.1-py3-none-any.whl", hash = "sha256:26576c5ed0f9007a07f4f4582f984c9bfac00ac93c268c6e558ad5ead0312b43", size = 589301, upload-time = "2026-03-08T21:49:38.794Z" },
 ]
 
 [[package]]
@@ -730,10 +739,11 @@ wheels = [
 
 [[package]]
 name = "vsview"
-version = "0.1.0b1"
+version = "0.1.0b3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jetpytools" },
+    { name = "platformdirs" },
     { name = "pluggy" },
     { name = "pydantic" },
     { name = "pygments" },
@@ -744,9 +754,9 @@ dependencies = [
     { name = "vsjetengine" },
     { name = "vspackrgb" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/54/e7/6b3646a2572cd1be99c76fa8e70520201732aa3db60d4d15606aa55b78bf/vsview-0.1.0b1.tar.gz", hash = "sha256:4f56e9adf91d3e1eeed9040a4b03cf0c549450a7cc2271060c18f287ae9e6f2a", size = 11206582, upload-time = "2026-03-05T18:18:23.732Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3b/bb/8f8548e0b1bdcbfebde663d2f9082d89be4dc6c5bd07e409d6aeecd892b9/vsview-0.1.0b3.tar.gz", hash = "sha256:adebd5752c318a5f232a4a584b3edea81864cecdfcbf00d9d7a42d8db01325f0", size = 11209078, upload-time = "2026-03-07T19:40:19.332Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/cb/97/f4e059c946492ebceef06758bb279e63a8cd03c7be3ed31ccac30c137211/vsview-0.1.0b1-py3-none-any.whl", hash = "sha256:c7d56e2281a1e1a35495e5c3a5ac86996b5f8715190d6d228c9ed993936e6981", size = 949500, upload-time = "2026-03-05T18:18:21.657Z" },
+    { url = "https://files.pythonhosted.org/packages/b0/55/fa9d755ce16b3b7d87a640250a88a1a9e05c9a24a3e70786976d336963d4/vsview-0.1.0b3-py3-none-any.whl", hash = "sha256:a890b9eafdda0baaba4b1e450fdaa06bd560e39785e0ddd3368f2e7c0d8f10eb", size = 951302, upload-time = "2026-03-07T19:40:17.775Z" },
 ]
 
 [[package]]
