@@ -2,15 +2,20 @@
 
 from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger
-from typing import Annotated, Any, Literal, NamedTuple
+from typing import TYPE_CHECKING, Annotated, Any, Literal, NamedTuple
 
-from jetpytools import CustomOverflowError, FuncExcept, to_arr
+from jetpytools import CustomOverflowError, FuncExcept, mod2, to_arr
 from vsexprtools import ExprOp, norm_expr
 from vskernels import ComplexKernel, ComplexKernelLike, Kernel, LeftShift, Point, TopShift
 from vsmasktools import MaskLike, normalize_mask
 from vsscale import Rescale
 from vsscale.helpers import BottomCrop, CropRel, LeftCrop, RightCrop, TopCrop
-from vstools import clip_data_gather, core, depth, get_prop, get_y, vs
+from vstools import clip_data_gather, core, depth, get_prop, get_y, padder, vs
+
+if TYPE_CHECKING:
+    import numpy as np
+
+type NpFloatArray1D = np.ndarray[tuple[Literal[1]], np.dtype[np.floating[Any]]]
 
 logger = getLogger(__name__)
 
@@ -290,3 +295,49 @@ def _norm_border_crops(
             return (value, value, value, value)
         case _:
             return value
+
+
+def get_dct_distribution(
+    clip: vs.VideoNode, cull_rate: float = 3.0, func: FuncExcept | None = None
+) -> tuple[NpFloatArray1D, NpFloatArray1D]:
+    """
+    Calculate DCT frequency distribution for both horizontal and vertical dimensions.
+
+    Args:
+        clip: Source clip. Must contain exactly one frame.
+        cull_rate: Cull rate for DCT coefficients.
+        func: Function returned for custom error handling.
+
+    Returns:
+        A tuple of (dct_h, dct_v).
+    """
+    import numpy as np
+    import scipy.fft
+
+    func = func or get_dct_distribution
+
+    if clip.num_frames != 1:
+        raise CustomOverflowError("Clip must have only one frame", func)
+
+    clip = get_y(clip)
+
+    def get_dct(clip: vs.VideoNode) -> NpFloatArray1D:
+        top_cut = 20 if clip.height > 720 else 10
+        side_cut = 20
+
+        if cull_rate:
+            side_cut = mod2(clip.width / (2 + cull_rate))
+
+        padded = padder.MIRROR(
+            clip.std.Crop(side_cut, side_cut, top_cut, top_cut),
+            side_cut // 2,
+            side_cut // 2,
+            top_cut,
+            top_cut,
+        ).std.Transpose()
+
+        rows = np.asarray(padded.get_frame(0)[0], dtype=np.float64)
+        rows_dct = scipy.fft.dct(rows, axis=-1)
+        return np.mean(np.abs(rows_dct), axis=0)
+
+    return get_dct(clip.std.Transpose()), get_dct(clip)

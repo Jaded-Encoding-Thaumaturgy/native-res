@@ -151,3 +151,20 @@ mask_opt = Option(
     metavar="EDGEDETECT",
     parser=EdgeDetect.from_param,
 )
+
+
+# Frequency exclusive
+cull_rate_opt = Option(
+    "--cull-rate",
+    "-cr",
+    help="Cull the sides/top of the frame to focus on the center.",
+    metavar="NUMBER",
+    show_default=True,
+)
+radius_opt = Option(
+    "--radius",
+    "-r",
+    help="Radius for finding peaks/spikes in the frequency plot.",
+    metavar="INTEGER",
+    show_default=True,
+)

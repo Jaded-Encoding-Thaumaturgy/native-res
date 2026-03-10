@@ -361,13 +361,260 @@ class RescalePlotWidget(BasePlotWidget):
             logger.info("Exported CSV to %s", path)
 
 
+class FrequencyPlotWidget(BasePlotWidget):
+    H_PEN = QPen(Qt.GlobalColor.green, 1.0)
+    V_PEN = QPen(Qt.GlobalColor.cyan, 1.0)
+    GRAY_PEN = QPen(QColor.fromRgbF(0.5, 0.5, 0.5, 0.75))
+    TRANSPARENT_COLOR = QColor("transparent")
+
+    def __init__(
+        self,
+        title: str,
+        dct_h: FloatArray1D,
+        dct_v: FloatArray1D,
+        min_val_h: int,
+        max_val_h: int,
+        min_val_v: int,
+        max_val_v: int,
+        check_radius: int = 50,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(title, parent)
+
+        chart = self.chart()
+
+        margins = chart.margins()
+        margins.setLeft(80)
+        chart.setMargins(margins)
+
+        self.dct_h = np.log10(np.clip(np.asarray(dct_h, np.float64), 1e-4, None))
+        self.dct_v = np.log10(np.clip(np.asarray(dct_v, np.float64), 1e-4, None))
+        self.min_val_h = min_val_h
+        self.max_val_h = max_val_h
+        self.min_val_v = min_val_v
+        self.max_val_v = max_val_v
+        self.check_radius = check_radius
+        self._last_snap_idx = -1
+        self._last_snap_dim = ""
+
+        y_min = min(self.dct_h.min(), self.dct_v.min())
+        y_max = max(self.dct_h.max(), self.dct_v.max())
+        y_pad = (y_max - y_min) * 0.05 if y_max != y_min else 1.0
+        self.initial_y_range = (y_min - y_pad, y_max + y_pad)
+        self.initial_xh_range = (0.0, max(1, len(self.dct_h) - 1))
+        self.initial_xv_range = (0.0, max(1, len(self.dct_v) - 1))
+
+        # Horizontal Series
+        self.series_h = QLineSeries(self)
+        self.series_h.setName("Width")
+        self.series_h.setPen(self.H_PEN)
+        self.series_h.appendNp(np.arange(len(self.dct_h), dtype=np.float64), self.dct_h)  # type: ignore[arg-type]
+        chart.addSeries(self.series_h)
+
+        # Vertical Series
+        self.series_v = QLineSeries(self)
+        self.series_v.setName("Height")
+        self.series_v.setPen(self.V_PEN)
+        self.series_v.appendNp(np.arange(len(self.dct_v), dtype=np.float64), self.dct_v)  # type: ignore[arg-type]
+        chart.addSeries(self.series_v)
+
+        # Spikes Horizontal Series
+        self.series_spikes_h = QScatterSeries(
+            self,
+            color=self.series_h.pen().color(),
+            borderColor=self.TRANSPARENT_COLOR,
+            markerSize=10,
+        )
+        self.series_spikes_h.setName("Spikes Width")
+        chart.addSeries(self.series_spikes_h)
+        self.set_spikes_h()
+
+        # Spikes Vertical Series
+        self.series_spikes_v = QScatterSeries(
+            self,
+            color=self.series_v.pen().color(),
+            borderColor=self.TRANSPARENT_COLOR,
+            markerSize=10,
+        )
+        self.series_spikes_v.setName("Spikes Height")
+        chart.addSeries(self.series_spikes_v)
+        self.set_spikes_v()
+
+        # Horizontal Axis (Bottom)
+        self.axis_x_h = QValueAxis(self, labelFormat="%.0f", tickCount=11)
+        self.axis_x_h.setTitleText("Width")
+        self.axis_x_h.setRange(*self.initial_xh_range)
+        chart.addAxis(self.axis_x_h, Qt.AlignmentFlag.AlignBottom)
+        self.series_h.attachAxis(self.axis_x_h)
+        self.series_spikes_h.attachAxis(self.axis_x_h)
+
+        # Vertical Axis (Bottom)
+        self.axis_x_v = QValueAxis(self, labelFormat="%.0f", tickCount=11)
+        self.axis_x_v.setTitleText("Height")
+        self.axis_x_v.setRange(*self.initial_xv_range)
+        chart.addAxis(self.axis_x_v, Qt.AlignmentFlag.AlignBottom)
+        self.series_v.attachAxis(self.axis_x_v)
+        self.series_spikes_v.attachAxis(self.axis_x_v)
+
+        # Shared Y Axis
+        self.axis_y = QValueAxis(self)
+        self.axis_y.setTitleVisible(False)
+        self.axis_y.setRange(*self.initial_y_range)
+        chart.addAxis(self.axis_y, Qt.AlignmentFlag.AlignLeft)
+        self.series_h.attachAxis(self.axis_y)
+        self.series_v.attachAxis(self.axis_y)
+        self.series_spikes_h.attachAxis(self.axis_y)
+        self.series_spikes_v.attachAxis(self.axis_y)
+
+        self.axis_y_title = CustomHorizontalTitle("DCT Value", chart, self.axis_y.titleFont())
+
+        logger.debug("FrequencyPlotWidget %r initialized", title)
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        if self.is_panning:
+            return super().mouseMoveEvent(event)
+
+        pos = event.position()
+        chart = self.chart()
+        area = chart.plotArea()
+
+        if not area.contains(pos):
+            self.reset_focus_series()
+            self.set_overlays_visible(False)
             return
 
-        # Position the horizontal Y-axis title in the left margin
-        # Center x horizontally in the left margin (area.left())
-        # Center y vertically relative to the plot area
-        rect = self.axis_y_title.boundingRect()
-        self.axis_y_title.setPos(
-            (area.left() - rect.width()) / 2,
-            area.top() + (area.height() - rect.height()) / 2,
-        )
+        # Map mouse to Width coordinate
+        val_h = chart.mapToValue(pos, self.series_h)
+        idx_h = int(np.clip(val_h.x(), 0, len(self.dct_h) - 1))
+        y_log_h = float(self.dct_h[idx_h])
+
+        # Map mouse to Height coordinate
+        val_v = chart.mapToValue(pos, self.series_v)
+        idx_v = int(np.clip(val_v.x(), 0, len(self.dct_v) - 1))
+        y_log_v = float(self.dct_v[idx_v])
+
+        # Map mouse Y to logical value
+        val_y = chart.mapToValue(pos, self.series_h).y()
+
+        # Decide which one to snap to based on Y distance
+        dist_h = abs(y_log_h - val_y)
+        dist_v = abs(y_log_v - val_y)
+
+        if dist_h < dist_v:
+            dim = "h"
+            snap_idx, snap_y = idx_h, y_log_h
+            snap_series = self.series_h
+            label_text = f"<b>Width:</b> {idx_h} (Val: {10**y_log_h:.10f})"
+        else:
+            dim = "v"
+            snap_idx, snap_y = idx_v, y_log_v
+            snap_series = self.series_v
+            label_text = f"<b>Height:</b> {idx_v} (Val: {10**y_log_v:.10f})"
+
+        if snap_idx == self._last_snap_idx and dim == self._last_snap_dim and self.v_line.isVisible():
+            return
+
+        self._last_snap_idx = snap_idx
+        self._last_snap_dim = dim
+        self.focus_series(dim)
+
+        # Snap crosshair to selected point
+        point = chart.mapToPosition(QPointF(snap_idx, snap_y), snap_series)
+        self.v_line.setLine(point.x(), area.top(), point.x(), area.bottom())
+        self.h_line.setLine(area.left(), point.y(), area.right(), point.y())
+
+        self.label.set_html_text(label_text, self.palette())
+
+        lx, ly = point.x() + 15, point.y() - 45
+        if lx + 180 > area.right():
+            lx = point.x() - 185
+        if ly < area.top():
+            ly = point.y() + 15
+        self.label.setPos(lx, ly)
+        self.set_overlays_visible(True)
+
+    def resizeEvent(self, event: QResizeEvent) -> None:
+        super().resizeEvent(event)
+        self.axis_y_title.update_from_chart(self.chart())
+
+    def reset_zoom(self) -> None:
+        self.axis_x_h.setRange(*self.initial_xh_range)
+        self.axis_x_v.setRange(*self.initial_xv_range)
+        self.axis_y.setRange(*self.initial_y_range)
+
+    def export_json(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Export JSON", "", "JSON Files (*.json)")
+        if path:
+            data = {
+                "width": [{"idx": i, "val": v} for i, v in enumerate(self.dct_h)],
+                "height": [{"idx": i, "val": v} for i, v in enumerate(self.dct_v)],
+            }
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            logger.info("Exported JSON to %s", path)
+
+    def export_csv(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
+        if path:
+            with open(path, "w", encoding="utf-8", newline="") as fh:
+                writer = csv.writer(fh)
+                writer.writerow(["Index", "Width (log10)", "Height (log10)"])
+                for i in range(max(len(self.dct_h), len(self.dct_v))):
+                    h = self.dct_h[i] if i < len(self.dct_h) else ""
+                    v = self.dct_v[i] if i < len(self.dct_v) else ""
+                    writer.writerow([i, h, v])
+            logger.info("Exported CSV to %s", path)
+
+    def set_spikes_h(self) -> None:
+        spikes_h = self._get_spikes(self.dct_h, self.min_val_h, self.max_val_h)
+
+        if len(spikes_h):
+            sh_x = spikes_h.astype(np.float64)
+            sh_y = self.dct_h[spikes_h].astype(np.float64)
+            self.series_spikes_h.replaceNp(sh_x, sh_y)  # type: ignore[arg-type]
+        else:
+            self.series_spikes_h.clear()
+
+    def set_spikes_v(self) -> None:
+        spikes_v = self._get_spikes(self.dct_v, self.min_val_v, self.max_val_v)
+
+        if len(spikes_v):
+            sv_x = spikes_v.astype(np.float64)
+            sv_y = self.dct_v[spikes_v].astype(np.float64)
+            self.series_spikes_v.replaceNp(sv_x, sv_y)  # type: ignore[arg-type]
+        else:
+            self.series_spikes_v.clear()
+
+    def focus_series(self, dimension: str, /) -> None:
+        match dimension:
+            case "h":
+                self.series_h.setPen(self.H_PEN)
+                self.series_v.setPen(self.GRAY_PEN)
+                self.series_spikes_h.setPen(self.H_PEN)
+                self.series_spikes_h.setColor(self.H_PEN.color())
+                self.series_spikes_v.setPen(self.GRAY_PEN)
+                self.series_spikes_v.setColor(self.GRAY_PEN.color())
+            case "v":
+                self.series_h.setPen(self.GRAY_PEN)
+                self.series_v.setPen(self.V_PEN)
+                self.series_spikes_h.setPen(self.GRAY_PEN)
+                self.series_spikes_h.setColor(self.GRAY_PEN.color())
+                self.series_spikes_v.setPen(self.V_PEN)
+                self.series_spikes_v.setColor(self.V_PEN.color())
+            case _:
+                self.reset_focus_series()
+
+    def reset_focus_series(self) -> None:
+        self.series_h.setPen(self.H_PEN)
+        self.series_v.setPen(self.V_PEN)
+        self.series_spikes_h.setPen(self.H_PEN)
+        self.series_spikes_h.setColor(self.H_PEN.color())
+        self.series_spikes_v.setPen(self.V_PEN)
+        self.series_spikes_v.setColor(self.V_PEN.color())
+
+    def _get_spikes(self, dct: np.ndarray, min_v: int, max_v: int) -> np.ndarray[tuple[int], np.dtype[np.intp]]:
+        (max_idx,) = argrelextrema(dct, np.less, order=self.check_radius)
+        (min_idx,) = argrelextrema(dct, np.greater, order=self.check_radius)
+
+        idx = np.concatenate((max_idx, min_idx))
+        return idx[(idx > min_v) & (idx < max_v)]

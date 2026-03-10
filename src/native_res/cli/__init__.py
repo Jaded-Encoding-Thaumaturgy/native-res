@@ -24,6 +24,7 @@ from .components import (
     app,
     base_dim_opt,
     crop_opt,
+    cull_rate_opt,
     debug_opt,
     dim_mode_opt,
     dim_opt,
@@ -34,6 +35,7 @@ from .components import (
     kernel_opt,
     mask_opt,
     metric_mode_opt,
+    radius_opt,
     range_dim_opt,
     show_default_kernels_opt,
     show_vskernels_opt,
@@ -256,3 +258,57 @@ def getscaler(
         "Always visually verify the suggested scaler and parameters on multiple frames before trusting them.",
         style=Style(color="yellow", dim=True),
     )
+
+
+@app.command(
+    help="[bold]Visualize the frequency distribution of a frame.[/]\n\n"
+    "Calculates the Discrete Cosine Transform (DCT) of the image rows/columns "
+    "to identify spikes that may indicate the native resolution or scaling artifacts.",
+    no_args_is_help=True,
+)
+def getfreq(
+    input_file: Annotated[SPath, input_file_arg],
+    frame: Annotated[int, frame_opt] = 0,
+    cull_rate: Annotated[float, cull_rate_opt] = 3.0,
+    radius: Annotated[int, radius_opt] = 50,
+    indexer: Annotated[Indexer, indexer_opt] = cast(Indexer, "bs"),
+) -> None:
+    from PySide6.QtWidgets import QApplication, QMainWindow, QStyle
+
+    from ..funcs import get_dct_distribution
+    from ..plotting import FrequencyPlotWidget
+
+    clip = get_videonode_from_input(input_file, indexer, frame, console)
+
+    progress = get_progress(console)
+    task = progress.add_task("Calculating DCT distribution...", total=None)
+
+    with progress:
+        dct_h, dct_v = get_dct_distribution(clip, cull_rate=cull_rate)
+        progress.update(task, completed=100, total=100, visible=False, refresh=True)
+
+    min_val_h, max_val_h = int(clip.width * LOW_RATE), int(clip.width * HIGH_RATE)
+    min_val_v, max_val_v = int(clip.height * LOW_RATE), int(clip.height * HIGH_RATE)
+
+    # Show the plot window
+    app = QApplication(sys.argv)
+    win = QMainWindow()
+    win.setWindowTitle("Frequency Analysis")
+    win.setWindowIcon(win.style().standardIcon(QStyle.StandardPixmap.SP_FileDialogContentsView))
+    win.resize(1000, 600)
+
+    plot = FrequencyPlotWidget(
+        f"DCT Frequency - {input_file.name}",
+        dct_h,
+        dct_v,
+        min_val_h,
+        max_val_h,
+        min_val_v,
+        max_val_v,
+        check_radius=radius,
+    )
+
+    win.setCentralWidget(plot)
+
+    win.show()
+    app.exec()
