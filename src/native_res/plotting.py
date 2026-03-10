@@ -81,7 +81,7 @@ class CustomHorizontalTitle(QGraphicsTextItem):
         # Center y vertically relative to the plot area
         rect = self.boundingRect()
         self.setPos(
-            (area.left() - rect.width()) / 2,
+            (area.left() - rect.width()) / 2 - 10,
             area.top() + (area.height() - rect.height()) / 2,
         )
 
@@ -247,6 +247,10 @@ class RescalePlotWidget(BasePlotWidget):
     ) -> None:
         super().__init__(title, parent)
         self.chart().legend().hide()
+
+        margins = self.chart().margins()
+        margins.setLeft(100)
+        self.chart().setMargins(margins)
 
         self.dims = np.asarray(dims, np.float64)
         self.errors = np.asarray(errors, np.float64)
