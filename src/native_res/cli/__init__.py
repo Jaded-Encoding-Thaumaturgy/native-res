@@ -110,9 +110,11 @@ def getnative(
     step_f = float(step)
     if step_f.is_integer():
         dims = range(start, stop + 1, int(step_f))
+        x_label_fmt = "%.0f"
     else:
         num = int((stop - start) / step_f) + 1
         dims = np.linspace(start, start + step_f * (num - 1), num).tolist()
+        x_label_fmt = f"%.{str(step_f)[::-1].find('.') + 1}f"
 
     # Pair with the fixed dimension
     match dim_mode:
@@ -162,6 +164,7 @@ def getnative(
         errors,
         dim_mode.title(),
     )
+    plot.axis_x.setLabelFormat(x_label_fmt)
 
     win.setCentralWidget(plot)
 
