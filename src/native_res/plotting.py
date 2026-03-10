@@ -6,7 +6,7 @@ from logging import getLogger
 from typing import Any, Literal
 
 import numpy as np
-from PySide6.QtCharts import QChart, QChartView, QLineSeries, QLogValueAxis, QScatterSeries, QValueAxis
+from PySide6.QtCharts import QCategoryAxis, QChart, QChartView, QLineSeries, QScatterSeries, QValueAxis
 from PySide6.QtCore import QMargins, QPointF, Qt
 from PySide6.QtGui import (
     QAction,
@@ -250,6 +250,7 @@ class RescalePlotWidget(BasePlotWidget):
 
         self.dims = np.asarray(dims, np.float64)
         self.errors = np.asarray(errors, np.float64)
+        self.errors_log = np.log10(np.clip(self.errors, 1e-15, None))
         self.dimension_mode = dimension_mode
         self._last_snap_idx = -1
 
@@ -266,7 +267,7 @@ class RescalePlotWidget(BasePlotWidget):
         self.series.setMarkerSize(2.5)
         self.series.setPointsVisible(True)
         if self.dims.size > 0:
-            self.series.appendNp(self.dims, self.errors)  # type: ignore[arg-type]
+            self.series.appendNp(self.dims, self.errors_log)  # type: ignore[arg-type]
         self.chart().addSeries(self.series)
 
         # Setup X Axis (Linear)
@@ -285,19 +286,22 @@ class RescalePlotWidget(BasePlotWidget):
         else:
             self.initial_x_range = (0.0, 10.0)
 
-        # Setup Y Axis (Logarithmic)
-        self.axis_y = QLogValueAxis(self, base=10.0, minorTickCount=4)
+        # Setup Y Axis (Linear mapping log10 values with true value labels)
+        self.axis_y = QCategoryAxis(self, labelsPosition=QCategoryAxis.AxisLabelsPosition.AxisLabelsPositionOnValue)
+        self.axis_y.setTickCount(11)
         self.axis_y.setTitleVisible(False)
         self.chart().addAxis(self.axis_y, Qt.AlignmentFlag.AlignLeft)
         self.series.attachAxis(self.axis_y)
+        self.axis_y.rangeChanged.connect(self._update_y_ticks)
 
-        if self.errors.size > 0:
-            y_min = max(self.errors.min(), 1e-15)
-            y_max = self.errors.max()
-            self.initial_y_range = (y_min * 0.5, y_max * 2.0)
+        if self.errors_log.size > 0:
+            y_min = self.errors_log.min()
+            y_max = self.errors_log.max()
+            pad = (y_max - y_min) * 0.05 if y_max != y_min else 0.1
+            self.initial_y_range = (y_min - pad, y_max + pad)
             self.axis_y.setRange(*self.initial_y_range)
         else:
-            self.initial_y_range = (1e-15, 1.0)
+            self.initial_y_range = (-15.0, 0.0)
 
         # Custom horizontal Y title
         self.axis_y_title = CustomHorizontalTitle("Error", self.chart(), self.axis_y.titleFont())
@@ -326,13 +330,14 @@ class RescalePlotWidget(BasePlotWidget):
         self._last_snap_idx = best_idx
 
         x, y = self.dims[best_idx], self.errors[best_idx]
-        point = self.chart().mapToPosition(QPointF(x, y))
+        y_log = self.errors_log[best_idx]
+        point = self.chart().mapToPosition(QPointF(x, y_log))
 
         # Update crosshairs to snap to the data point
         self.v_line.setLine(point.x(), area.top(), point.x(), area.bottom())
         self.h_line.setLine(area.left(), point.y(), area.right(), point.y())
 
-        self.label.set_html_text(f"<b>{self.dimension_mode}:</b> {x:g}<br><b>Error:</b> {y:.10f}", self.palette())
+        self.label.set_html_text(f"<b>{self.dimension_mode}:</b> {x:g}<br><b>Error:</b> {y:.10e}", self.palette())
 
         # Avoid tooltip occlusion at chart edges
         lx, ly = point.x() + 15, point.y() - 45
@@ -361,6 +366,24 @@ class RescalePlotWidget(BasePlotWidget):
     def serialize_csv(self) -> Iterable[Iterable[Any]]:
         yield [f"{self.dimension_mode}", "Error"]
         yield from zip(self.dims, self.errors)
+
+    def _update_y_ticks(self, y_min: float, y_max: float) -> None:
+        for label in self.axis_y.categoriesLabels():
+            self.axis_y.remove(label)
+
+        if y_min == y_max:
+            return
+
+        seen_labels = set[str]()
+
+        for val in np.linspace(y_min, y_max, self.axis_y.tickCount()):
+            label = f"{10**val:.3e}"
+            # Ensure the label is unique by appending a space if we zoom really far in
+            while label in seen_labels:
+                label += " "
+
+            seen_labels.add(label)
+            self.axis_y.append(label, float(val))
 
 
 class FrequencyPlotWidget(BasePlotWidget):
