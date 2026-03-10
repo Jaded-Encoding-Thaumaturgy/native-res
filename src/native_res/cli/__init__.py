@@ -17,6 +17,7 @@ from vskernels import ComplexKernel
 from vsmasktools import EdgeDetect
 from vssource import Indexer
 
+from ..constants import HIGH_RATE, LOW_RATE
 from ..funcs import getfnative, getfscaler
 from ..kernels import default_kernels
 from .components import (
@@ -101,7 +102,7 @@ def getnative(
             case _:
                 assert_never(dim_mode)
 
-        start, stop = int(dim * 0.465), int(dim * 0.925)
+        start, stop = int(dim * LOW_RATE), int(dim * HIGH_RATE)
 
     # Build the list of dims (int or fractional)
     step_f = float(step)
