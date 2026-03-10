@@ -86,7 +86,7 @@ def set_global_debug(value: bool) -> None:
 
 def show_default_kernels(value: bool) -> None:
     if value:
-        from .kernels import default_kernels
+        from ..kernels import default_kernels
 
         console = Console(stderr=True)
 

@@ -18,9 +18,8 @@ from vsmasktools import EdgeDetect
 from vssource import Indexer
 
 from ..funcs import getfnative, getfscaler
+from ..kernels import default_kernels
 from .components import (
-    NativeCommand,
-    ScalerCommand,
     app,
     base_dim_opt,
     crop_opt,
@@ -40,7 +39,6 @@ from .components import (
     step_opt,
 )
 from .helpers import get_progress, get_videonode_from_input
-from .kernels import default_kernels
 
 console = Console(stderr=True)
 
