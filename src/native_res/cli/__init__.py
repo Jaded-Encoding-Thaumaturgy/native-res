@@ -3,7 +3,7 @@
 import sys
 import warnings
 from itertools import zip_longest
-from logging import DEBUG, INFO, basicConfig, captureWarnings, getLogger
+from logging import INFO, basicConfig, captureWarnings, getLogger
 from typing import Annotated, Any, Literal, assert_never, cast
 
 from jetpytools import SPath
@@ -66,7 +66,6 @@ def callback(
 
 
 @app.command(
-    cls=NativeCommand,
     help="[bold]Determine the native resolution of upscaled material.[/]\n\n"
     "Analyzes a range of dimensions to find which one produces the lowest error when inverse scaled.\n"
     "Primary use case is finding the native resolution of upscaled anime.",
@@ -167,7 +166,6 @@ def getnative(
 
 
 @app.command(
-    cls=ScalerCommand,
     help="[bold]Identify the best inverse scaler for a given resolution.[/]\n\n"
     "Compares multiple kernels against a specific target resolution to determine which one "
     "was likely used for the original upscaling.",

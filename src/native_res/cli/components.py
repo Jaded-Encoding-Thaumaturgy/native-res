@@ -1,7 +1,5 @@
-from click import Context, HelpFormatter
 from jetpytools import SPath
 from typer import Argument, Option, Typer
-from typer.core import TyperCommand
 from vsmasktools import EdgeDetect
 
 from .helpers import (
@@ -14,17 +12,6 @@ from .helpers import (
     show_default_kernels,
     show_vskernels,
 )
-
-
-class NativeCommand(TyperCommand):
-    def format_usage(self, ctx: Context, formatter: HelpFormatter) -> None:
-        formatter.write_usage(ctx.command_path, "INPUT [OPTIONS]")
-
-
-class ScalerCommand(TyperCommand):
-    def format_usage(self, ctx: Context, formatter: HelpFormatter) -> None:
-        formatter.write_usage(ctx.command_path, "INPUT DIM [OPTIONS]")
-
 
 # DEBUG
 debug_opt = Option(
@@ -54,7 +41,7 @@ app = Typer(
 
 # Commons
 input_file_arg = Argument(
-    help="Path to the source material to analyze."
+    help="Path to the source material to analyze. "
     "Supports videos, images, or VapourSynth scripts. For scripts, the first output is used.",
     metavar="INPUT",
     resolve_path=True,
