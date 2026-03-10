@@ -1,9 +1,9 @@
 import csv
 import json
 from abc import abstractmethod
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from logging import getLogger
-from typing import Literal
+from typing import Any, Literal
 
 import numpy as np
 from PySide6.QtCharts import QChart, QChartView, QLineSeries, QLogValueAxis, QScatterSeries, QValueAxis
@@ -128,19 +128,19 @@ class BasePlotWidget(QChartView):
         self.export_menu = self.menu.addMenu("Export")
 
         self.png_action = QAction("Export as PNG", self)
-        self.png_action.triggered.connect(self.export_png)
+        self.png_action.triggered.connect(self.on_export_png)
         self.export_menu.addAction(self.png_action)
 
         self.svg_action = QAction("Export as SVG", self)
-        self.svg_action.triggered.connect(self.export_svg)
+        self.svg_action.triggered.connect(self.on_export_svg)
         self.export_menu.addAction(self.svg_action)
 
         self.json_action = QAction("Export as JSON", self)
-        self.json_action.triggered.connect(self.export_json)
+        self.json_action.triggered.connect(self.on_export_json)
         self.export_menu.addAction(self.json_action)
 
         self.csv_action = QAction("Export as CSV", self)
-        self.csv_action.triggered.connect(self.export_csv)
+        self.csv_action.triggered.connect(self.on_export_csv)
         self.export_menu.addAction(self.csv_action)
 
     @property
@@ -191,19 +191,33 @@ class BasePlotWidget(QChartView):
     def reset_zoom(self) -> None: ...
 
     @abstractmethod
-    def export_json(self) -> None: ...
+    def serialize_json(self) -> Any: ...
 
     @abstractmethod
-    def export_csv(self) -> None: ...
+    def serialize_csv(self) -> Iterable[Iterable[Any]]: ...
 
-    def export_png(self) -> None:
+    def on_export_json(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Export JSON", "", "JSON Files (*.json)")
+        if path:
+            with open(path, "w") as f:
+                json.dump(self.serialize_json(), f, indent=2)
+            logger.info("Exported JSON to %s", path)
+
+    def on_export_csv(self) -> None:
+        path, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
+        if path:
+            with open(path, "w", encoding="utf-8", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerows(self.serialize_csv())
+            logger.info("Exported CSV to %s", path)
+
+    def on_export_png(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "Export PNG", "", "PNG Files (*.png)")
         if path:
-            pixmap = self.grab()
-            pixmap.save(path, "PNG")
+            self.grab().save(path, "PNG")
             logger.info("Exported PNG to %s", path)
 
-    def export_svg(self) -> None:
+    def on_export_svg(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "Export SVG", "", "SVG Files (*.svg)")
         if path:
             generator = QSvgGenerator(
@@ -338,27 +352,15 @@ class RescalePlotWidget(BasePlotWidget):
         self.axis_x.setRange(*self.initial_x_range)
         self.axis_y.setRange(*self.initial_y_range)
 
-    def export_json(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export JSON", "", "JSON Files (*.json)")
-        if path:
-            data = {
-                "dimension_mode": self.dimension_mode,
-                "data": [{"x": float(x), "y": float(y)} for x, y in zip(self.dims, self.errors)],
-            }
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+    def serialize_json(self) -> Any:
+        return {
+            "dimension_mode": self.dimension_mode,
+            "data": [{"x": float(x), "y": float(y)} for x, y in zip(self.dims, self.errors)],
+        }
 
-            logger.info("Exported JSON to %s", path)
-
-    def export_csv(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
-        if path:
-            with open(path, "w", encoding="utf-8", newline="") as fh:
-                writer = csv.writer(fh)
-                writer.writerow([f"{self.dimension_mode}", "Error"])
-                writer.writerows(zip(self.dims, self.errors))
-
-            logger.info("Exported CSV to %s", path)
+    def serialize_csv(self) -> Iterable[Iterable[Any]]:
+        yield [f"{self.dimension_mode}", "Error"]
+        yield from zip(self.dims, self.errors)
 
 
 class FrequencyPlotWidget(BasePlotWidget):
@@ -542,28 +544,19 @@ class FrequencyPlotWidget(BasePlotWidget):
         self.axis_x_v.setRange(*self.initial_xv_range)
         self.axis_y.setRange(*self.initial_y_range)
 
-    def export_json(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export JSON", "", "JSON Files (*.json)")
-        if path:
-            data = {
-                "width": [{"idx": i, "val": v} for i, v in enumerate(self.dct_h)],
-                "height": [{"idx": i, "val": v} for i, v in enumerate(self.dct_v)],
-            }
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
-            logger.info("Exported JSON to %s", path)
+    def serialize_json(self) -> Any:
+        return {
+            "width": [{"idx": i, "val": v} for i, v in enumerate(self.dct_h)],
+            "height": [{"idx": i, "val": v} for i, v in enumerate(self.dct_v)],
+        }
 
-    def export_csv(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
-        if path:
-            with open(path, "w", encoding="utf-8", newline="") as fh:
-                writer = csv.writer(fh)
-                writer.writerow(["Index", "Width (log10)", "Height (log10)"])
-                for i in range(max(len(self.dct_h), len(self.dct_v))):
-                    h = self.dct_h[i] if i < len(self.dct_h) else ""
-                    v = self.dct_v[i] if i < len(self.dct_v) else ""
-                    writer.writerow([i, h, v])
-            logger.info("Exported CSV to %s", path)
+    def serialize_csv(self) -> Iterable[Iterable[Any]]:
+        yield ["Index", "Width (log10)", "Height (log10)"]
+
+        for i in range(max(len(self.dct_h), len(self.dct_v))):
+            h = self.dct_h[i] if i < len(self.dct_h) else ""
+            v = self.dct_v[i] if i < len(self.dct_v) else ""
+            yield [i, h, v]
 
     def set_spikes_h(self) -> None:
         spikes_h = self._get_spikes(self.dct_h, self.min_val_h, self.max_val_h)
