@@ -11,7 +11,7 @@ requires-python = ">=3.12"
 dependencies = [
     "jetpytools",
     "vsjetengine>=1.2.0",
-    "vsjetpack>=1.0.0",
+    "vsjetpack>=1.3.0",
     "typer>=0.24.0",
     "rich",
     "pyside6>=6.10.1",
@@ -37,7 +37,6 @@ plugin = ["vsview-native-res"]
 members = ["src/plugin"]
 
 [tool.uv.sources]
-vsjetpack = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack", branch = "hashable-scaler" }
 vsview-native-res = { workspace = true }
 
 [tool.hatch.build.targets.sdist]
