@@ -90,7 +90,7 @@ def getnative(
 
     from ..plotting import RescalePlotWidget
 
-    clip = get_videonode_from_input(input_file, indexer, frame, console)
+    clip = get_videonode_from_input(input_file, indexer)
 
     # Resolve dimension and the range of dimensions to check
     if range_dim:
@@ -132,6 +132,7 @@ def getnative(
     with progress:
         results = getfnative(
             clip,
+            frame,
             dimensions,
             kernel,
             crop,
@@ -193,7 +194,7 @@ def getscaler(
     mask: Annotated[type[EdgeDetect] | None, mask_opt] = None,
     indexer: Annotated[Indexer, indexer_opt] = cast(Indexer, "bs"),
 ) -> None:
-    clip = get_videonode_from_input(input_file, indexer, frame, console)
+    clip = get_videonode_from_input(input_file, indexer)
 
     # Resolve dimension to check
     scaler_args: dict[str, Any] = {
@@ -214,6 +215,7 @@ def getscaler(
     with progress:
         ress = getfscaler(
             clip,
+            frame,
             kernels=(*default_kernels, *kernels),
             crop=crop,
             metric_mode=metric_mode,
@@ -278,13 +280,13 @@ def getfreq(
     from ..funcs import get_dct_distribution
     from ..plotting import FrequencyPlotWidget
 
-    clip = get_videonode_from_input(input_file, indexer, frame, console)
+    clip = get_videonode_from_input(input_file, indexer)
 
     progress = get_progress(console)
     task = progress.add_task("Calculating DCT distribution...", total=None)
 
     with progress:
-        dct_h, dct_v = get_dct_distribution(clip, cull_rate=cull_rate)
+        dct_h, dct_v = get_dct_distribution(clip, frame, cull_rate=cull_rate)
         progress.update(task, completed=100, total=100, visible=False, refresh=True)
 
     min_val_h, max_val_h = int(clip.width * LOW_RATE), int(clip.width * HIGH_RATE)

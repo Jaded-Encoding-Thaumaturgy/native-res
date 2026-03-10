@@ -109,7 +109,7 @@ def show_vskernels(value: bool) -> None:
 
 
 # Helpers
-def get_videonode_from_input(path: SPath, indexer: Indexer, frame: int, console: Console) -> vs.VideoNode:
+def get_videonode_from_input(path: SPath, indexer: Indexer) -> vs.VideoNode:
     if not path.exists():
         raise BadParameter(f"{path.to_str()!r} doesn't exist.")
 
@@ -129,7 +129,7 @@ def get_videonode_from_input(path: SPath, indexer: Indexer, frame: int, console:
 
         signal(SIGINT, SIG_DFL)
 
-    clip = indexer.source(path, 32, idx_props=False)[frame]
+    clip = indexer.source(path, 32, idx_props=False)
     return clip.resize.Bilinear(format=vs.GRAYS, matrix=Matrix.BT709, matrix_in=Matrix.from_video(clip))
 
 

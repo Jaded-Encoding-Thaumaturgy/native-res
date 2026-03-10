@@ -4,7 +4,7 @@ from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger
 from typing import TYPE_CHECKING, Annotated, Any, Literal, NamedTuple
 
-from jetpytools import CustomOverflowError, FuncExcept, mod2, to_arr
+from jetpytools import FuncExcept, mod2, to_arr
 from vsexprtools import ExprOp, norm_expr
 from vskernels import ComplexKernel, ComplexKernelLike, Kernel, LeftShift, Point, TopShift
 from vsmasktools import MaskLike, normalize_mask
@@ -43,7 +43,8 @@ class GetNativeResult(NamedTuple):
 
 
 def getfnative(
-    clip: Annotated[vs.VideoNode, "OneFrameClip"],
+    clip: vs.VideoNode,
+    frame_num: int,
     dimensions: Iterable[tuple[float, float]],
     kernel: ComplexKernelLike,
     crop: tuple[LeftCrop, RightCrop, TopCrop, BottomCrop] | None = None,
@@ -56,15 +57,14 @@ def getfnative(
     **kwargs: Any,
 ) -> list[GetNativeResult]:
     """
-    Determine the best (fractional) native resolution for an upscaled frame.
+    Determine the best (fractional) native resolution for a selected frame.
 
-    This checks a list of candidate resolutions by descaling the single frame using `kernel`
+    This checks a list of candidate resolutions by descaling the selected frame using `kernel`
     and comparing the result to the source frame using `metric_mode`.
 
-    Only the first (and only) frame of `clip` is evaluated.
-
     Args:
-        clip: Source clip. Must contain exactly one frame.
+        clip: Source clip.
+        frame_num: Frame index in `clip` to evaluate.
         dimensions: Iterable of candidate resolutions to test. Each item may be a `(width, height)` tuple.
         kernel: Kernel used to perform each descale attempt.
         crop: Optional crop to apply before descaling. Aspect ratio is preserved.
@@ -75,19 +75,13 @@ def getfnative(
         func: Function returned for custom error handling.
         kwargs: Additional arguments passed to the Rescale class.
 
-    Raises:
-        CustomOverflowError: If `clip` does not contain exactly one frame.
-
     Returns:
         A list of `GetNativeResult` items.
         Each item contains the tested fractional resolution (`dim`) and its associated `error`.
     """
     func = func or getfnative
 
-    if clip.num_frames != 1:
-        raise CustomOverflowError("Clip must have only one frame", func)
-
-    clip = depth(get_y(clip), 32)
+    clip_frame = depth(get_y(clip), 32)[frame_num]
 
     kernel = ComplexKernel.ensure_obj(kernel, func)
     crops = _norm_border_crops(borders_aware, kernel)
@@ -95,13 +89,13 @@ def getfnative(
     dimensions = list(dimensions)
 
     rescale_list = [
-        Rescale(clip, res[1], kernel, _point_resize, width=res[0], crop=crop, shift=shift, **kwargs)
+        Rescale(clip_frame, res[1], kernel, _point_resize, width=res[0], crop=crop, shift=shift, **kwargs)
         for res in dimensions
     ]
 
     rescaled = clip.std.BlankClip(length=len(dimensions)).std.FrameEval(lambda n: rescale_list[n].rescale)
     rescaled = (
-        norm_expr([rescaled, clip], getattr(ExprOp, metric_mode.lower())(clip), func=func)
+        norm_expr([rescaled, clip_frame], getattr(ExprOp, metric_mode.lower())(clip_frame), func=func)
         .std.CropRel(*crops)
         .std.PlaneStats()
     )
@@ -127,6 +121,7 @@ class GetScalerResult(NamedTuple):
 
 def getfscaler(
     clip: Annotated[vs.VideoNode, "OneFrameClip"],
+    frame_num: int,
     width: float,
     height: float,
     kernels: ComplexKernelLike | Sequence[ComplexKernelLike],
@@ -142,15 +137,16 @@ def getfscaler(
     **kwargs: Any,
 ) -> list[GetScalerResult]:
     """
-    Find the best inverse scaler (kernel) for a given single-frame clip.
+    Find the best inverse scaler (kernel) for a given frame of a clip.
 
-    Each supplied kernel is tested by descaling the single frame to the provided
+    Each supplied kernel is tested by descaling the selected frame to the provided
     `(width, height)` and computing an error metric.
 
     If `width`/`height` are floats, fractional descaling is performed.
 
     Args:
-        clip: Source clip. Must contain exactly one frame.
+        clip: Source clip.
+        frame_num: Frame index in `clip` to evaluate.
         width: Width to be descaled to. If passed as a float, a fractional descale is performed.
         height: Height to be descaled to. If passed as a float, a fractional descale is performed.
         kernels: A single kernel or a sequence of kernels to evaluate.
@@ -164,16 +160,10 @@ def getfscaler(
         func: Function returned for custom error handling.
         kwargs: Additional arguments passed to the Rescale class.
 
-    Raises:
-        CustomOverflowError: If `clip` does not contain exactly one frame.
-
     Returns:
         A list of `GetScalerResult` items. Each item contains the evaluated `kernel` and its associated `error`.
     """
     func = func or getfscaler
-
-    if clip.num_frames != 1:
-        raise CustomOverflowError("Clip must have only one frame", func)
 
     resolved_kernels = {ComplexKernel.ensure_obj(k, func) for k in to_arr(kernels)}  # type:ignore[arg-type]
 
@@ -182,6 +172,7 @@ def getfscaler(
             kernel,
             get_descale_error(
                 clip,
+                frame_num,
                 width,
                 height,
                 kernel,
@@ -200,7 +191,8 @@ def getfscaler(
 
 
 def get_descale_error(
-    clip: Annotated[vs.VideoNode, "OneFrameClip"],
+    clip: vs.VideoNode,
+    frame_num: int,
     width: float,
     height: float,
     kernel: ComplexKernelLike,
@@ -216,10 +208,11 @@ def get_descale_error(
     **kwargs: Any,
 ) -> float:
     """
-    Compute the descale error for a single-frame clip using a specific kernel.
+    Compute the descale error for a selected frame using a specific kernel.
 
     Args:
-        clip: Source clip. Must contain exactly one frame.
+        clip: Source clip.
+        frame_num: Frame index in `clip` to evaluate.
         width: Width to be descaled to. If passed as a float, a fractional descale is performed.
         height: Height to be descaled to. If passed as a float, a fractional descale is performed.
         kernel: Kernel used for the descale operation.
@@ -233,24 +226,18 @@ def get_descale_error(
         func: Function returned for custom error handling.
         kwargs: Additional arguments passed to the Rescale class.
 
-    Raises:
-        CustomOverflowError: If `clip` does not contain exactly one frame.
-
     Returns:
         The computed error as a `float`. Lower values indicate a better descale match.
     """
 
     func = func or get_descale_error
 
-    if clip.num_frames != 1:
-        raise CustomOverflowError("Clip must have only one frame", func)
-
-    clip = depth(get_y(clip), 32)
+    clip_frame = depth(get_y(clip), 32)[frame_num]
 
     kernel = ComplexKernel.ensure_obj(kernel, func)
 
     rs = Rescale(
-        clip,
+        clip_frame,
         height,
         kernel,
         width=width,
@@ -265,14 +252,14 @@ def get_descale_error(
     rescaled = rs.rescale
 
     if mask:
-        mask = normalize_mask(mask, clip, clip, func=func)
+        mask = normalize_mask(mask, clip_frame, clip_frame, func=func)
 
-        rescaled = core.std.MaskedMerge(clip, rescaled, mask)
+        rescaled = core.std.MaskedMerge(clip_frame, rescaled, mask)
 
     crops = _norm_border_crops(borders_aware, kernel)
 
     rescaled = (
-        norm_expr([rescaled, clip], getattr(ExprOp, metric_mode.lower())(clip), func=func)
+        norm_expr([rescaled, clip_frame], getattr(ExprOp, metric_mode.lower())(clip_frame), func=func)
         .std.CropRel(*crops)
         .std.PlaneStats()
     )
@@ -298,13 +285,17 @@ def _norm_border_crops(
 
 
 def get_dct_distribution(
-    clip: vs.VideoNode, cull_rate: float = 3.0, func: FuncExcept | None = None
+    clip: vs.VideoNode,
+    frame_num: int,
+    cull_rate: float = 3.0,
+    func: FuncExcept | None = None,
 ) -> tuple[NpFloatArray1D, NpFloatArray1D]:
     """
-    Calculate DCT frequency distribution for both horizontal and vertical dimensions.
+    Calculate DCT frequency distribution for both horizontal and vertical dimensions of a selected frame.
 
     Args:
-        clip: Source clip. Must contain exactly one frame.
+        clip: Source clip.
+        frame_num: Frame index in `clip` to analyze.
         cull_rate: Cull rate for DCT coefficients.
         func: Function returned for custom error handling.
 
@@ -316,20 +307,17 @@ def get_dct_distribution(
 
     func = func or get_dct_distribution
 
-    if clip.num_frames != 1:
-        raise CustomOverflowError("Clip must have only one frame", func)
+    clip_frame = get_y(clip)[frame_num]
 
-    clip = get_y(clip)
-
-    def get_dct(clip: vs.VideoNode) -> NpFloatArray1D:
-        top_cut = 20 if clip.height > 720 else 10
+    def get_dct(c: vs.VideoNode) -> NpFloatArray1D:
+        top_cut = 20 if c.height > 720 else 10
         side_cut = 20
 
         if cull_rate:
-            side_cut = mod2(clip.width / (2 + cull_rate))
+            side_cut = mod2(c.width / (2 + cull_rate))
 
         padded = padder.MIRROR(
-            clip.std.Crop(side_cut, side_cut, top_cut, top_cut),
+            c.std.Crop(side_cut, side_cut, top_cut, top_cut),
             side_cut // 2,
             side_cut // 2,
             top_cut,
@@ -340,4 +328,4 @@ def get_dct_distribution(
         rows_dct = scipy.fft.dct(rows, axis=-1)
         return np.mean(np.abs(rows_dct), axis=0)
 
-    return get_dct(clip.std.Transpose()), get_dct(clip)
+    return get_dct(clip_frame.std.Transpose()), get_dct(clip_frame)
