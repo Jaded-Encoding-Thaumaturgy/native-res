@@ -6,6 +6,7 @@ from logging import getLogger
 from typing import Any, Literal
 
 import numpy as np
+from jetpytools import clamp
 from PySide6.QtCharts import QCategoryAxis, QChart, QChartView, QLineSeries, QScatterSeries, QValueAxis
 from PySide6.QtCore import QBuffer, QIODevice, QMargins, QMimeData, QPointF, Qt
 from PySide6.QtGui import (
@@ -331,7 +332,7 @@ class RescalePlotWidget(BasePlotWidget):
 
         self.dims = np.asarray(dims, np.float64)
         self.errors = np.asarray(errors, np.float64)
-        self.errors_log = np.log10(np.clip(self.errors, 1e-15, None))
+        self.errors_log = np.log10(self.errors.clip(1e-15, None))
         self.dimension_mode = dimension_mode
         self._last_snap_idx = -1
 
@@ -404,7 +405,7 @@ class RescalePlotWidget(BasePlotWidget):
         val = self.chart().mapToValue(pos)
 
         # Lookup for nearest data point
-        idx = np.clip(self.dims.searchsorted(val.x()), 1, self.dims.size - 1)
+        idx = self.dims.searchsorted(val.x()).clip(1, self.dims.size - 1)
         best_idx = int(idx if abs(self.dims[idx] - val.x()) < abs(self.dims[idx - 1] - val.x()) else idx - 1)
 
         if best_idx == self._last_snap_idx and self.v_line.isVisible():
@@ -495,8 +496,8 @@ class FrequencyPlotWidget(BasePlotWidget):
         margins.setLeft(80)
         chart.setMargins(margins)
 
-        self.dct_h = np.log10(np.clip(np.asarray(dct_h, np.float64), 1e-4, None))
-        self.dct_v = np.log10(np.clip(np.asarray(dct_v, np.float64), 1e-4, None))
+        self.dct_h = np.log10(np.asarray(dct_h, np.float64).clip(1e-4, None))
+        self.dct_v = np.log10(np.asarray(dct_v, np.float64).clip(1e-4, None))
         self.min_val_h = min_val_h
         self.max_val_h = max_val_h
         self.min_val_v = min_val_v
@@ -593,12 +594,12 @@ class FrequencyPlotWidget(BasePlotWidget):
 
         # Map mouse to Width coordinate
         val_h = chart.mapToValue(pos, self.series_h)
-        idx_h = int(np.clip(val_h.x(), 0, len(self.dct_h) - 1))
+        idx_h = int(clamp(val_h.x(), 0, len(self.dct_h) - 1))
         y_log_h = float(self.dct_h[idx_h])
 
         # Map mouse to Height coordinate
         val_v = chart.mapToValue(pos, self.series_v)
-        idx_v = int(np.clip(val_v.x(), 0, len(self.dct_v) - 1))
+        idx_v = int(clamp(val_v.x(), 0, len(self.dct_v) - 1))
         y_log_v = float(self.dct_v[idx_v])
 
         # Map mouse Y to logical value
