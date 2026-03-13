@@ -46,9 +46,9 @@ class GetNativeResult(NamedTuple):
 
 
 class GetNative[**P, R](VSObject):
-    class CacheRescale(LRUCache[tuple[vs.VideoNode, int], dict[ScalingArgs, vs.VideoNode]]):
-        def __missing__(self, key: tuple[vs.VideoNode, int]) -> dict[ScalingArgs, vs.VideoNode]:
-            d = dict[ScalingArgs, vs.VideoNode]()
+    class CacheRescale(LRUCache[tuple[vs.VideoNode, int], dict[tuple[ComplexKernel, ScalingArgs], vs.VideoNode]]):
+        def __missing__(self, key: tuple[vs.VideoNode, int]) -> dict[tuple[ComplexKernel, ScalingArgs], vs.VideoNode]:
+            d = dict[tuple[ComplexKernel, ScalingArgs], vs.VideoNode]()
             self[key] = d
             return d
 
@@ -119,11 +119,11 @@ def getnative(
     def get_rescale(n: int) -> vs.VideoNode:
         rs = rescale_list[n]
 
-        if rescale := getnative.cache_rescale.get((clip, frame_num), {}).get(rs.descale_args):
+        if rescale := getnative.cache_rescale.get((clip, frame_num), {}).get((kernel, rs.descale_args)):
             return rescale
 
         rescale = rs.rescale
-        getnative.cache_rescale[clip, frame_num][rs.descale_args] = rescale
+        getnative.cache_rescale[clip, frame_num][(kernel, rs.descale_args)] = rescale
         return rescale
 
     rescaled = clip_frame.std.BlankClip(length=len(dimensions)).std.FrameEval(get_rescale)
