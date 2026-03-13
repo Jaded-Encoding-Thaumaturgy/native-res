@@ -18,7 +18,7 @@ from vsmasktools import EdgeDetect
 from vssource import Indexer
 
 from ..constants import HIGH_RATE, LOW_RATE
-from ..funcs import getfnative, getfscaler
+from ..funcs import MetricMode, getfnative, getfscaler
 from ..kernels import default_kernels
 from .components import (
     app,
@@ -82,7 +82,7 @@ def getnative(
     frame: Annotated[int, frame_opt] = 0,
     step: Annotated[float, step_opt] = 1,
     crop: Annotated[tuple[int, int, int, int] | None, crop_opt] = None,
-    metric_mode: Annotated[Literal["MAE", "MSE", "RMSE"], metric_mode_opt] = "MAE",
+    metric_mode: Annotated[MetricMode, metric_mode_opt] = "MAE",
     indexer: Annotated[Indexer, indexer_opt] = cast(Indexer, "bs"),
 ) -> None:
     import numpy as np
@@ -187,7 +187,7 @@ def getscaler(
     kernels: Annotated[list[ComplexKernel], kernel_opt] = [],
     frame: Annotated[int, frame_opt] = 0,
     crop: Annotated[tuple[int, int, int, int] | None, crop_opt] = None,
-    metric_mode: Annotated[Literal["MAE", "MSE", "RMSE"], metric_mode_opt] = "MAE",
+    metric_mode: Annotated[MetricMode, metric_mode_opt] = "MAE",
     mask: Annotated[type[EdgeDetect] | None, mask_opt] = None,
     indexer: Annotated[Indexer, indexer_opt] = cast(Indexer, "bs"),
 ) -> None:

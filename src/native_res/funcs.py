@@ -4,7 +4,7 @@ import ast
 import re
 from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger
-from typing import TYPE_CHECKING, Annotated, Any, Literal, NamedTuple
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple
 
 from jetpytools import FuncExcept, mod2, to_arr
 from vsexprtools import ExprOp, norm_expr
@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     import numpy as np
 
 type NpFloatArray1D = np.ndarray[tuple[Literal[1]], np.dtype[np.floating[Any]]]
+type MetricMode = Literal["MSE", "MAE", "RMSE"]
 
 logger = getLogger(__name__)
 
@@ -51,7 +52,7 @@ def getfnative(
     kernel: ComplexKernelLike,
     crop: tuple[LeftCrop, RightCrop, TopCrop, BottomCrop] | None = None,
     shift: tuple[TopShift, LeftShift] = (0, 0),
-    metric_mode: Literal["MSE", "MAE", "RMSE"] = "MAE",
+    metric_mode: MetricMode = "MAE",
     borders_aware: bool | int | tuple[LeftCrop, RightCrop, TopCrop, BottomCrop] = 8,
     progress_cb: Callable[[int, int], None] | None = None,
     *,
@@ -122,7 +123,7 @@ class GetScalerResult(NamedTuple):
 
 
 def getfscaler(
-    clip: Annotated[vs.VideoNode, "OneFrameClip"],
+    clip: vs.VideoNode,
     frame_num: int,
     width: float,
     height: float,
@@ -131,7 +132,7 @@ def getfscaler(
     base_height: int | None = None,
     crop: tuple[LeftCrop, RightCrop, TopCrop, BottomCrop] | None = None,
     shift: tuple[TopShift, LeftShift] = (0, 0),
-    metric_mode: Literal["MSE", "MAE", "RMSE"] = "MAE",
+    metric_mode: MetricMode = "MAE",
     mask: MaskLike | None = None,
     borders_aware: bool | int | tuple[LeftCrop, RightCrop, TopCrop, BottomCrop] = 8,
     *,
@@ -202,7 +203,7 @@ def get_descale_error(
     base_height: int | None = None,
     crop: tuple[LeftCrop, RightCrop, TopCrop, BottomCrop] | None = None,
     shift: tuple[TopShift, LeftShift] = (0, 0),
-    metric_mode: Literal["MSE", "MAE", "RMSE"] = "MAE",
+    metric_mode: MetricMode = "MAE",
     mask: MaskLike | None = None,
     borders_aware: bool | int | tuple[LeftCrop, RightCrop, TopCrop, BottomCrop] = 8,
     *,
