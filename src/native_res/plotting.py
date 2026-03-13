@@ -7,12 +7,13 @@ from typing import Any, Literal
 
 import numpy as np
 from PySide6.QtCharts import QCategoryAxis, QChart, QChartView, QLineSeries, QScatterSeries, QValueAxis
-from PySide6.QtCore import QMargins, QPointF, Qt
+from PySide6.QtCore import QBuffer, QIODevice, QMargins, QMimeData, QPointF, Qt
 from PySide6.QtGui import (
     QAction,
     QColor,
     QContextMenuEvent,
     QFont,
+    QImage,
     QMouseEvent,
     QPainter,
     QPalette,
@@ -125,6 +126,25 @@ class BasePlotWidget(QChartView):
         self.menu.addAction(self.reset_action)
 
         self.menu.addSeparator()
+
+        self.copy_menu = self.menu.addMenu("Copy")
+
+        self.copy_png_action = QAction("Copy as PNG", self)
+        self.copy_png_action.triggered.connect(self.copy_png)
+        self.copy_menu.addAction(self.copy_png_action)
+
+        self.copy_svg_action = QAction("Copy as SVG", self)
+        self.copy_svg_action.triggered.connect(self.copy_svg)
+        self.copy_menu.addAction(self.copy_svg_action)
+
+        self.copy_json_action = QAction("Copy as JSON", self)
+        self.copy_json_action.triggered.connect(self.copy_json)
+        self.copy_menu.addAction(self.copy_json_action)
+
+        self.copy_csv_action = QAction("Copy as CSV", self)
+        self.copy_csv_action.triggered.connect(self.copy_csv)
+        self.copy_menu.addAction(self.copy_csv_action)
+
         self.export_menu = self.menu.addMenu("Export")
 
         self.png_action = QAction("Export as PNG", self)
@@ -214,21 +234,78 @@ class BasePlotWidget(QChartView):
     def on_export_png(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "Export PNG", "", "PNG Files (*.png)")
         if path:
-            self.grab().save(path, "PNG")
+            self.render_to_image().save(path, "PNG")  # type: ignore[call-overload]
             logger.info("Exported PNG to %s", path)
 
     def on_export_svg(self) -> None:
         path, _ = QFileDialog.getSaveFileName(self, "Export SVG", "", "SVG Files (*.svg)")
         if path:
-            generator = QSvgGenerator(
-                size=self.size(),
-                viewBox=self.rect().toRectF(),
-                title=self.chart().title(),
-                fileName=path,
-            )
-            with QPainter(generator) as painter:
-                self.render(painter)
+            self.render_to_svg(file=path)
             logger.info("Exported SVG to %s", path)
+
+    def copy_json(self) -> None:
+        QApplication.clipboard().setText(json.dumps(self.serialize_json(), indent=2))
+        logger.info("Copied JSON to clipboard")
+
+    def copy_csv(self) -> None:
+        QApplication.clipboard().setText("\n".join(",".join(map(str, row)) for row in self.serialize_csv()))
+        logger.info("Copied CSV to clipboard")
+
+    def copy_png(self) -> None:
+        image = self.render_to_image()
+
+        buffer = QBuffer(self)
+        buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+        image.save(buffer, "PNG")  # type: ignore[call-overload]
+
+        mime_data = QMimeData()
+        mime_data.setData("image/png", buffer.data())
+        mime_data.setImageData(image)
+        mime_data.setText(self.chart().title())
+
+        QApplication.clipboard().setMimeData(mime_data)
+        logger.info("Copied PNG to clipboard")
+
+    def copy_svg(self) -> None:
+        buffer = QBuffer(self)
+        buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+        self.render_to_svg(output=buffer)
+        buffer.close()
+
+        svg_bytes = buffer.data()
+        mime_data = QMimeData()
+        mime_data.setData("image/svg+xml", svg_bytes)
+        mime_data.setText(bytes(svg_bytes.data()).decode("utf-8"))
+
+        QApplication.clipboard().setMimeData(mime_data)
+        logger.info("Copied SVG to clipboard")
+
+    def render_to_image(self) -> QImage:
+        self.set_overlays_visible(False)
+
+        image = QImage(self.size() * self.devicePixelRatioF(), QImage.Format.Format_ARGB32)
+        image.setDevicePixelRatio(self.devicePixelRatioF())
+        image.fill(Qt.GlobalColor.transparent)
+
+        with QPainter(image) as painter:
+            painter.setRenderHints(QPainter.RenderHint.Antialiasing | QPainter.RenderHint.TextAntialiasing)
+            self.render(painter)
+
+        return image
+
+    def render_to_svg(self, file: str | None = None, output: QIODevice | None = None) -> None:
+        self.set_overlays_visible(False)
+
+        generator = QSvgGenerator(
+            size=self.size(),
+            viewBox=self.rect().toRectF(),
+            title=self.chart().title(),
+            fileName=file,
+            outputDevice=output,
+        )
+
+        with QPainter(generator) as painter:
+            self.render(painter)
 
     def set_overlays_visible(self, visible: bool) -> None:
         self.v_line.setVisible(visible)
