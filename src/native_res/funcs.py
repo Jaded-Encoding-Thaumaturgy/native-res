@@ -11,8 +11,8 @@ from vsexprtools import ExprOp, norm_expr
 from vskernels import ComplexKernel, ComplexKernelLike, Kernel, LeftShift, Point, TopShift
 from vsmasktools import MaskLike, normalize_mask
 from vsscale import Rescale
-from vsscale.helpers import BottomCrop, CropRel, LeftCrop, RightCrop, TopCrop
-from vstools import clip_data_gather, core, depth, get_prop, get_y, padder, vs
+from vsscale.helpers import BottomCrop, CropRel, LeftCrop, RightCrop, ScalingArgs, TopCrop
+from vstools import LRUCache, VSObject, clip_data_gather, core, depth, get_prop, get_y, padder, vs
 
 if TYPE_CHECKING:
     import numpy as np
@@ -45,6 +45,26 @@ class GetNativeResult(NamedTuple):
     """Computed error for this resolution (higher means worse)."""
 
 
+class GetNative[**P, R](VSObject):
+    class CacheRescale(LRUCache[tuple[vs.VideoNode, int], dict[ScalingArgs, vs.VideoNode]]):
+        def __missing__(self, key: tuple[vs.VideoNode, int]) -> dict[ScalingArgs, vs.VideoNode]:
+            d = dict[ScalingArgs, vs.VideoNode]()
+            self[key] = d
+            return d
+
+    def __init__(self, func: Callable[P, R]) -> None:
+        self.cache_rescale = GetNative.CacheRescale(cache_size=20)
+        self._func = func
+
+    def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
+        return self._func(*args, **kwargs)
+
+    def __vs_del__(self, core_id: int) -> None:
+        self.cache_rescale.clear()
+        super().__vs_del__(core_id)
+
+
+@GetNative
 def getfnative(
     clip: vs.VideoNode,
     frame_num: int,
@@ -96,7 +116,17 @@ def getfnative(
         for res in dimensions
     ]
 
-    rescaled = clip.std.BlankClip(length=len(dimensions)).std.FrameEval(lambda n: rescale_list[n].rescale)
+    def get_rescale(n: int) -> vs.VideoNode:
+        rs = rescale_list[n]
+
+        if rescale := getfnative.cache_rescale.get((clip, frame_num), {}).get(rs.descale_args):
+            return rescale
+
+        rescale = rs.rescale
+        getfnative.cache_rescale[clip, frame_num][rs.descale_args] = rescale
+        return rescale
+
+    rescaled = clip_frame.std.BlankClip(length=len(dimensions)).std.FrameEval(get_rescale)
     rescaled = (
         norm_expr([rescaled, clip_frame], getattr(ExprOp, metric_mode.lower())(clip_frame), func=func)
         .std.CropRel(*crops)
