@@ -121,7 +121,7 @@ show_vskernels_opt = Option(
     rich_help_panel="Helpers",
 )
 
-# getfnative exclusive
+# getnative exclusive
 range_dim_opt = Option(
     "--range-dim",
     "-rd",
@@ -132,7 +132,7 @@ range_dim_opt = Option(
 step_opt = Option("--step", "-s", help="The increment step between resolutions in the tested range.", metavar="NUMBER")
 
 
-# getfscaler exclusive
+# getscaler exclusive
 dim_opt = Argument(
     help="The suspected native resolution to verify. "
     "Use an integer for exact pixels (e.g., 720) or a float for sub-pixel dimensions (e.g., 719.8).",

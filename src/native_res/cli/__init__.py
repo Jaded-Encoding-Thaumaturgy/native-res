@@ -17,8 +17,8 @@ from vskernels import ComplexKernel
 from vsmasktools import EdgeDetect
 from vssource import Indexer
 
+from .. import funcs
 from ..constants import HIGH_RATE, LOW_RATE
-from ..funcs import MetricMode, getfnative, getfscaler
 from ..kernels import default_kernels
 from .components import (
     app,
@@ -82,7 +82,7 @@ def getnative(
     frame: Annotated[int, frame_opt] = 0,
     step: Annotated[float, step_opt] = 1,
     crop: Annotated[tuple[int, int, int, int] | None, crop_opt] = None,
-    metric_mode: Annotated[MetricMode, metric_mode_opt] = "MAE",
+    metric_mode: Annotated[funcs.MetricMode, metric_mode_opt] = "MAE",
     indexer: Annotated[Indexer, indexer_opt] = cast(Indexer, "bs"),
 ) -> None:
     import numpy as np
@@ -132,7 +132,7 @@ def getnative(
     logger.debug(kernel)
 
     with progress:
-        results = getfnative(
+        results = funcs.getnative(
             clip,
             frame,
             dimensions,
@@ -173,7 +173,7 @@ def getnative(
     epilog="""
 [dim]Notes:
 
- - getfscaler gives heuristic results; it's not infallible.
+ - getscaler gives heuristic results; it's not infallible.
 
  - Always visually verify the suggested scaler and parameters on multiple frames before trusting them.[/dim]
 """,
@@ -187,7 +187,7 @@ def getscaler(
     kernels: Annotated[list[ComplexKernel], kernel_opt] = [],
     frame: Annotated[int, frame_opt] = 0,
     crop: Annotated[tuple[int, int, int, int] | None, crop_opt] = None,
-    metric_mode: Annotated[MetricMode, metric_mode_opt] = "MAE",
+    metric_mode: Annotated[funcs.MetricMode, metric_mode_opt] = "MAE",
     mask: Annotated[type[EdgeDetect] | None, mask_opt] = None,
     indexer: Annotated[Indexer, indexer_opt] = cast(Indexer, "bs"),
 ) -> None:
@@ -210,7 +210,7 @@ def getscaler(
     task = progress.add_task("Gathering data...", total=None)
 
     with progress:
-        ress = getfscaler(
+        ress = funcs.getscaler(
             clip,
             frame,
             kernels=(*default_kernels, *kernels),

@@ -36,7 +36,7 @@ class ResolutionFrac(NamedTuple):
 
 
 class GetNativeResult(NamedTuple):
-    """Result for `getfnative`, pairing a fractional resolution with an error metric."""
+    """Result for `getnative`, pairing a fractional resolution with an error metric."""
 
     dim: ResolutionFrac
     """The tested fractional resolution as an `ResolutionFrac`."""
@@ -65,7 +65,7 @@ class GetNative[**P, R](VSObject):
 
 
 @GetNative
-def getfnative(
+def getnative(
     clip: vs.VideoNode,
     frame_num: int,
     dimensions: Iterable[tuple[float, float]],
@@ -102,7 +102,7 @@ def getfnative(
         A list of `GetNativeResult` items.
         Each item contains the tested fractional resolution (`dim`) and its associated `error`.
     """
-    func = func or getfnative
+    func = func or getnative
 
     clip_frame = depth(get_y(clip), 32)[frame_num]
 
@@ -119,11 +119,11 @@ def getfnative(
     def get_rescale(n: int) -> vs.VideoNode:
         rs = rescale_list[n]
 
-        if rescale := getfnative.cache_rescale.get((clip, frame_num), {}).get(rs.descale_args):
+        if rescale := getnative.cache_rescale.get((clip, frame_num), {}).get(rs.descale_args):
             return rescale
 
         rescale = rs.rescale
-        getfnative.cache_rescale[clip, frame_num][rs.descale_args] = rescale
+        getnative.cache_rescale[clip, frame_num][rs.descale_args] = rescale
         return rescale
 
     rescaled = clip_frame.std.BlankClip(length=len(dimensions)).std.FrameEval(get_rescale)
@@ -142,8 +142,11 @@ def getfnative(
             r.__vs_del__(-1)
 
 
+getfnative = getnative
+
+
 class GetScalerResult(NamedTuple):
-    """Result for `getfscaler`, pairing a kernel with its error."""
+    """Result for `getscaler`, pairing a kernel with its error."""
 
     kernel: ComplexKernel
     """The `ComplexKernel` instance that was evaluated."""
@@ -152,7 +155,7 @@ class GetScalerResult(NamedTuple):
     """Computed error for that kernel (lower is better)."""
 
 
-def getfscaler(
+def getscaler(
     clip: vs.VideoNode,
     frame_num: int,
     width: float,
@@ -196,7 +199,7 @@ def getfscaler(
     Returns:
         A list of `GetScalerResult` items. Each item contains the evaluated `kernel` and its associated `error`.
     """
-    func = func or getfscaler
+    func = func or getscaler
 
     resolved_kernels = {ComplexKernel.ensure_obj(k, func) for k in to_arr(kernels)}  # type:ignore[arg-type]
 
@@ -221,6 +224,9 @@ def getfscaler(
         )
         for kernel in resolved_kernels
     ]
+
+
+getfscaler = getscaler
 
 
 def get_descale_error(
