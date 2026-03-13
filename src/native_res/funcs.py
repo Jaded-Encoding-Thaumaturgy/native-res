@@ -1,5 +1,7 @@
 """Python API"""
 
+import ast
+import re
 from collections.abc import Callable, Iterable, Sequence
 from logging import getLogger
 from typing import TYPE_CHECKING, Annotated, Any, Literal, NamedTuple
@@ -329,3 +331,30 @@ def get_dct_distribution(
         return np.mean(np.abs(rows_dct), axis=0)
 
     return get_dct(clip_frame.std.Transpose()), get_dct(clip_frame)
+
+
+def resolve_kernel(value: str, exc_type: type[Exception] = ValueError) -> ComplexKernel:
+    matched = re.match(r"^([A-Za-z_]\w*)(?:\((.*)\))?$", value.strip(), re.DOTALL)
+
+    if not matched:
+        raise exc_type("expected KernelName(...) or KernelName")
+
+    name, args_text = matched.group(1), (matched.group(2) or "").strip()
+
+    kernel = ComplexKernel.from_param(name, exc_type)
+
+    if not args_text:
+        return kernel()
+
+    expr = f"{name}({args_text})"
+
+    node = ast.parse(expr, mode="eval")
+    call = node.body
+
+    if not (isinstance(call, ast.Call) and isinstance(call.func, ast.Name) and call.func.id == name):
+        raise ValueError
+
+    return kernel(
+        *(ast.literal_eval(a) for a in call.args),
+        **{kw.arg: ast.literal_eval(kw.value) for kw in call.keywords if kw.arg},
+    )

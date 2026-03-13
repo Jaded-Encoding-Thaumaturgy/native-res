@@ -1,12 +1,13 @@
+from click import BadParameter
 from jetpytools import SPath
 from typer import Argument, Option, Typer
 from vsmasktools import EdgeDetect
 
+from ..funcs import resolve_kernel
 from .helpers import (
     resolve_dimension,
     resolve_dimension_mode,
     resolve_idx,
-    resolve_kernel,
     set_debug,
     set_global_debug,
     show_default_kernels,
@@ -61,7 +62,7 @@ kernel_opt = Option(
     "Can be a kernel name or a class call with parameters (e.g., 'Bicubic(b=0, c=0.5)').\n\n"
     "Use --show-kernels for a list of available kernels.",
     metavar="Kernel|Kernel(arg0=..., arg1=...)",
-    parser=resolve_kernel,
+    parser=lambda v: resolve_kernel(v, BadParameter),
     rich_help_panel="Common",
 )
 
