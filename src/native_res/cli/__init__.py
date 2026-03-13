@@ -139,13 +139,7 @@ def getnative(
             kernel,
             crop,
             metric_mode=metric_mode,
-            progress_cb=lambda curr, total: progress.update(
-                gtask_id,
-                completed=curr,
-                total=total,
-                visible=True,
-                refresh=True,
-            ),
+            progress_cb=lambda curr, total: progress.update(gtask_id, advance=1, total=total, visible=True),
         )
         progress.update(gtask_id, total=100, completed=100, refresh=True)
 
