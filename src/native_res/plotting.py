@@ -336,15 +336,7 @@ class RescalePlotWidget(BasePlotWidget):
         self._last_snap_idx = -1
 
         self.series = QLineSeries(self)
-        self.series.setPen(
-            QPen(
-                self.palette().color(QPalette.ColorRole.BrightText),
-                1.0,
-                Qt.PenStyle.SolidLine,
-                Qt.PenCapStyle.SquareCap,
-                Qt.PenJoinStyle.MiterJoin,
-            )
-        )
+        self.series.setPen(self.default_series_pen)
         self.series.setMarkerSize(2.5)
         self.series.setPointsVisible(True)
         if self.dims.size > 0:
@@ -388,6 +380,16 @@ class RescalePlotWidget(BasePlotWidget):
         self.axis_y_title = CustomHorizontalTitle("Error", self.chart(), self.axis_y.titleFont())
 
         logger.debug("RescalePlotWidget %r initialized", title)
+
+    @property
+    def default_series_pen(self) -> QPen:
+        return QPen(
+            self.palette().color(QPalette.ColorRole.BrightText),
+            1.0,
+            Qt.PenStyle.SolidLine,
+            Qt.PenCapStyle.SquareCap,
+            Qt.PenJoinStyle.MiterJoin,
+        )
 
     def mouseMoveEvent(self, event: QMouseEvent) -> None:
         if self.is_panning:
