@@ -1,4 +1,4 @@
-"""Python API"""
+"""Python API."""
 
 import ast
 import re
@@ -47,6 +47,8 @@ class GetNativeResult(NamedTuple):
 
 class GetNative[**P, R](VSObject):
     class CacheRescale(LRUCache[tuple[vs.VideoNode, int], dict[tuple[ComplexKernel, ScalingArgs], vs.VideoNode]]):
+        """Cache for rescale results."""
+
         def __missing__(self, key: tuple[vs.VideoNode, int]) -> dict[tuple[ComplexKernel, ScalingArgs], vs.VideoNode]:
             d = dict[tuple[ComplexKernel, ScalingArgs], vs.VideoNode]()
             self[key] = d
