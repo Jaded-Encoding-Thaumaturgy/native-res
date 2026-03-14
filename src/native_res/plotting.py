@@ -285,8 +285,9 @@ class BasePlotWidget(QChartView):
     def render_to_image(self) -> QImage:
         self.set_overlays_visible(False)
 
-        image = QImage(self.size() * self.devicePixelRatioF(), QImage.Format.Format_ARGB32)
-        image.setDevicePixelRatio(self.devicePixelRatioF())
+        dpr = self.screen().devicePixelRatio()
+        image = QImage(self.size() * dpr, QImage.Format.Format_ARGB32)
+        image.setDevicePixelRatio(dpr)
         image.fill(Qt.GlobalColor.transparent)
 
         with QPainter(image) as painter:
