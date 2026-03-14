@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     import numpy as np
 
 type NpFloatArray1D = np.ndarray[tuple[Literal[1]], np.dtype[np.floating[Any]]]
-type MetricMode = Literal["MSE", "MAE", "RMSE"]
+type MetricMode = Literal["MAE", "MSE", "RMSE"]
 
 logger = getLogger(__name__)
 
