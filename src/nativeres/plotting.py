@@ -299,7 +299,11 @@ class BasePlotWidget(QChartView):
     def render_to_svg(self, file: str | None = None, output: QIODevice | None = None) -> None:
         self.set_overlays_visible(False)
 
-        generator = QSvgGenerator(size=self.size(), viewBox=self.rect().toRectF(), title=self.chart().title())
+        generator = QSvgGenerator()
+        generator.setSize(self.size())
+        generator.setViewBox(self.rect())
+        generator.setTitle(self.chart().title())
+
         if file:
             generator.setFileName(file)
         if output:
