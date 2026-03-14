@@ -87,7 +87,7 @@ def get_videonode_from_input(path: SPath, indexer: Indexer) -> vs.VideoNode:
     if path.suffix in (".py", ".vpy"):
         from vsengine import load_script
 
-        load_script(path, module="__native_res__").result()
+        load_script(path, module="__nativeres__").result()
         out = next(iter(vs.get_outputs().values()))
 
         if not isinstance(out, vs.VideoOutputTuple):

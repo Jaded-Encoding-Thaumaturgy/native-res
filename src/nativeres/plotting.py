@@ -338,7 +338,6 @@ class RescalePlotWidget(BasePlotWidget):
         self._last_snap_idx = -1
 
         self.series = QLineSeries(self)
-        self.series.setPen(self.default_series_pen)
         self.series.setMarkerSize(2.5)
         self.series.setPointsVisible(True)
         if self.dims.size > 0:

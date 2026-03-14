@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-native-res = "native_res.cli:app"
+native-res = "nativeres.cli:app"
 
 [dependency-groups]
 dev = [
@@ -38,12 +38,14 @@ members = ["src/plugin"]
 
 [tool.uv.sources]
 vsview-native-res = { workspace = true }
+vsjetpack = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack", branch = "main" }
+vsview = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-view", branch = "main" }
 
 [tool.hatch.build.targets.sdist]
-include = ["src/native_res", "README.md", "LICENSE", "pyproject.toml"]
+include = ["src/nativeres", "README.md", "LICENSE", "pyproject.toml"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/native_res"]
+packages = ["src/nativeres"]
 
 [tool.mypy]
 mypy_path = "$MYPY_CONFIG_FILE_DIR/stubs"

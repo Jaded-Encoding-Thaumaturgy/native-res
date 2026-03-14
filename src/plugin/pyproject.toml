@@ -1,10 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "vsview-native-res"
 version = "0.1.0"
-description = "Add your description here"
+description = "A vsview plugin for analyzing and determining the native resolution of video content"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.12"
+authors = [{ name = "Vardë", email = "ichunjo.le.terrible@gmail.com" }]
+maintainers = [{ name = "Vardë", email = "ichunjo.le.terrible@gmail.com" }]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
 dependencies = ["vsview", "native-res"]
 
 [tool.uv.sources]
 native-res = { workspace = true }
+
+[project.entry-points.vsview]
+vsview_nativeres = "vsview_nativeres"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/vsview_nativeres"]

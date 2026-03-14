@@ -1,0 +1,165 @@
+from __future__ import annotations
+
+from collections.abc import Iterator, Sequence
+from contextlib import suppress
+from logging import getLogger
+from typing import TYPE_CHECKING, Annotated, Literal
+
+from jetpytools import get_subclasses
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer, ValidationError
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QCompleter, QInputDialog, QLineEdit, QWidget
+from vskernels import ComplexKernel
+from vsview.api import ColorPicker, Dropdown, ListEdit, ListEditWidget
+
+from nativeres.funcs import resolve_kernel
+from nativeres.kernels import default_kernels
+
+if TYPE_CHECKING:
+    from PySide6.QtCharts import QChart
+
+logger = getLogger(__name__)
+
+
+def get_kernel_names() -> Iterator[str]:
+    for kernel in get_subclasses(ComplexKernel):
+        if not kernel.is_abstract:
+            yield kernel.__name__
+
+            with suppress(Exception):
+                yield kernel().pretty_string
+
+
+KERNEL_NAMES = sorted(get_kernel_names())
+
+
+class KernelListEditWidget(ListEditWidget[str]):
+    def __init__(
+        self,
+        value_type: type[str],
+        parent: QWidget | None = None,
+        default_value: str | Sequence[str] | None = None,
+    ) -> None:
+        super().__init__(value_type, parent, default_value)
+        self.list_widget.setMaximumHeight(200)
+
+    def _add_item(self) -> None:
+        dialog = QInputDialog(self)
+        dialog.setInputMode(QInputDialog.InputMode.TextInput)
+        dialog.setWindowTitle("Add Item")
+        dialog.setLabelText("Enter kernel name, class or instance:")
+
+        if line_edit := dialog.findChild(QLineEdit):
+            completer = QCompleter(KERNEL_NAMES, line_edit, caseSensitivity=Qt.CaseSensitivity.CaseInsensitive)
+            line_edit.setCompleter(completer)
+
+        if dialog.exec() and (text := dialog.textValue()):
+            try:
+                self.adapter.validate_python(text)
+            except ValidationError as e:
+                logger.error("Invalid value: %s", e)
+
+            try:
+                resolve_kernel(text)
+            except ValueError as e:
+                logger.error("%s", e)
+                return
+
+            self.list_widget.addItem(text)
+
+
+class KernelsListEdit(ListEdit[str]):
+    def create_widget(self, parent: QWidget | None = None) -> KernelListEditWidget:
+        return KernelListEditWidget(self.value_type, parent, self.default_value)
+
+
+def _freq_dim_color_to_ui(c: QColor) -> str:
+    return c.name() if isinstance(c, QColor) else c
+
+
+def _freq_dim_color_from_ui(s: str) -> str:
+    return QColor(s).name()
+
+
+PydanticQColorMetadata = (BeforeValidator(lambda v: QColor(v)), PlainSerializer(lambda c: c.name()))
+
+PydanticKernel = Annotated[
+    ComplexKernel,
+    BeforeValidator(lambda v: resolve_kernel(v)),
+    PlainSerializer(lambda k: k.pretty_string, return_type=str),
+]
+
+
+class GlobalSettings(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    chart_theme: Annotated[
+        str,
+        Dropdown(
+            label="Chart Theme",
+            tooltip="",
+            items=[
+                ("Default", "Default"),
+                ("Light", "Light"),
+                ("BlueCerulean", "BlueCerulean"),
+                ("Dark", "Dark"),
+                ("BrownSand", "BrownSand"),
+                ("BlueNcs", "BlueNcs"),
+                ("HighContrast", "HighContrast"),
+                ("BlueIcy", "BlueIcy"),
+                ("Qt", "Qt"),
+            ],
+        ),
+    ] = "Default"
+    frequency_width_color: Annotated[
+        QColor,
+        *PydanticQColorMetadata,
+        ColorPicker(
+            label="Frequency Width Color",
+            tooltip="The color of the width distribution in the frequency dimension plot.\n"
+            "Only applies for the default theme",
+            to_ui=_freq_dim_color_to_ui,
+            from_ui=_freq_dim_color_from_ui,
+        ),
+    ] = QColor(Qt.GlobalColor.green)
+    frequency_height_color: Annotated[
+        QColor,
+        *PydanticQColorMetadata,
+        ColorPicker(
+            label="Frequency Height Color",
+            tooltip="The color of the height distribution in the frequency dimension plot\n"
+            "Only applies for the default theme",
+            to_ui=_freq_dim_color_to_ui,
+            from_ui=_freq_dim_color_from_ui,
+        ),
+    ] = QColor(Qt.GlobalColor.cyan)
+    kernels: Annotated[
+        list[PydanticKernel],
+        KernelsListEdit(
+            label="Kernels",
+            value_type=str,
+            tooltip="The list of kernels to check in getnative and getscaler mode",
+            default_value=[k.pretty_string for k in default_kernels],
+        ),
+    ] = list(default_kernels)
+
+    def get_chart_theme(self) -> Literal[False] | QChart.ChartTheme:
+        from PySide6.QtCharts import QChart
+
+        return False if self.chart_theme == "Default" else getattr(QChart.ChartTheme, f"ChartTheme{self.chart_theme}")
+
+
+class GetNativeSettings(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    last_dimension: int | None = None
+    last_min_range: int | None = None
+    last_max_range: int | None = None
+    last_step: float | None = None
+    last_kernel: PydanticKernel | None = None
+    last_metric: str | None = None
+
+
+class LocalSettings(BaseModel):
+    getnative: GetNativeSettings = Field(default_factory=GetNativeSettings)
