@@ -497,6 +497,7 @@ class FrequencyPlotWidget(BasePlotWidget):
         margins.setLeft(80)
         chart.setMargins(margins)
 
+        self.gray_pen = QPen(self.GRAY_PEN)
         self.dct_h = np.log10(np.asarray(dct_h, np.float64).clip(1e-4, None))
         self.dct_v = np.log10(np.asarray(dct_v, np.float64).clip(1e-4, None))
         self.min_val_h = min_val_h
@@ -506,6 +507,7 @@ class FrequencyPlotWidget(BasePlotWidget):
         self.check_radius = check_radius
         self._last_snap_idx = -1
         self._last_snap_dim = ""
+        self._current_focus: Literal["h", "v", ""] = ""
 
         y_min = min(self.dct_h.min(), self.dct_v.min())
         y_max = max(self.dct_h.max(), self.dct_v.max())
@@ -517,16 +519,17 @@ class FrequencyPlotWidget(BasePlotWidget):
         # Horizontal Series
         self.series_h = QLineSeries(self)
         self.series_h.setName("Width")
-        self.series_h.setPen(self.H_PEN)
         self.series_h.appendNp(np.arange(len(self.dct_h), dtype=np.float64), self.dct_h)  # type: ignore[arg-type]
         chart.addSeries(self.series_h)
 
         # Vertical Series
         self.series_v = QLineSeries(self)
         self.series_v.setName("Height")
-        self.series_v.setPen(self.V_PEN)
         self.series_v.appendNp(np.arange(len(self.dct_v), dtype=np.float64), self.dct_v)  # type: ignore[arg-type]
         chart.addSeries(self.series_v)
+
+        self.h_pen = self.series_h.pen()
+        self.v_pen = self.series_v.pen()
 
         # Spikes Horizontal Series
         self.series_spikes_h = QScatterSeries(
@@ -591,6 +594,8 @@ class FrequencyPlotWidget(BasePlotWidget):
         if not area.contains(pos):
             self.reset_focus_series()
             self.set_overlays_visible(False)
+            self._last_snap_idx = -1
+            self._last_snap_dim = ""
             return
 
         # Map mouse to Width coordinate
@@ -626,7 +631,7 @@ class FrequencyPlotWidget(BasePlotWidget):
 
         self._last_snap_idx = snap_idx
         self._last_snap_dim = dim
-        self.focus_series(dim)
+        self.focus_series(dim)  # type: ignore[arg-type]
 
         # Snap crosshair to selected point
         point = chart.mapToPosition(QPointF(snap_idx, snap_y), snap_series)
@@ -686,32 +691,55 @@ class FrequencyPlotWidget(BasePlotWidget):
         else:
             self.series_spikes_v.clear()
 
-    def focus_series(self, dimension: str, /) -> None:
-        match dimension:
-            case "h":
-                self.series_h.setPen(self.H_PEN)
-                self.series_v.setPen(self.GRAY_PEN)
-                self.series_spikes_h.setPen(self.H_PEN)
-                self.series_spikes_h.setColor(self.H_PEN.color())
-                self.series_spikes_v.setPen(self.GRAY_PEN)
-                self.series_spikes_v.setColor(self.GRAY_PEN.color())
-            case "v":
-                self.series_h.setPen(self.GRAY_PEN)
-                self.series_v.setPen(self.V_PEN)
-                self.series_spikes_h.setPen(self.GRAY_PEN)
-                self.series_spikes_h.setColor(self.GRAY_PEN.color())
-                self.series_spikes_v.setPen(self.V_PEN)
-                self.series_spikes_v.setColor(self.V_PEN.color())
-            case _:
-                self.reset_focus_series()
+    def focus_series(self, dimension: Literal["h", "v", ""], /) -> None:
+        if self._current_focus == dimension:
+            return
+
+        self._current_focus = dimension
+        self.apply_focus()
 
     def reset_focus_series(self) -> None:
-        self.series_h.setPen(self.H_PEN)
-        self.series_v.setPen(self.V_PEN)
-        self.series_spikes_h.setPen(self.H_PEN)
-        self.series_spikes_h.setColor(self.H_PEN.color())
-        self.series_spikes_v.setPen(self.V_PEN)
-        self.series_spikes_v.setColor(self.V_PEN.color())
+        if self._current_focus == "":
+            return
+
+        self._current_focus = ""
+        self.apply_focus()
+
+    def apply_focus(self) -> None:
+        match self._current_focus:
+            case "h":
+                h_pen, v_pen = self.h_pen, self.gray_pen
+                order = [self.series_v, self.series_spikes_v, self.series_h, self.series_spikes_h]
+            case "v":
+                h_pen, v_pen = self.gray_pen, self.v_pen
+                order = [self.series_h, self.series_spikes_h, self.series_v, self.series_spikes_v]
+            case _:
+                h_pen, v_pen = self.h_pen, self.v_pen
+                order = [self.series_h, self.series_v, self.series_spikes_h, self.series_spikes_v]
+
+        self.series_h.setPen(h_pen)
+        self.series_v.setPen(v_pen)
+
+        self.series_spikes_h.setPen(h_pen)
+        self.series_spikes_h.setColor(h_pen.color())
+
+        self.series_spikes_v.setPen(v_pen)
+        self.series_spikes_v.setColor(v_pen.color())
+
+        # Re-add series to change Z-order (bring focused to front)
+        for s in order:
+            self.chart().removeSeries(s)
+            self.chart().addSeries(s)
+
+        # Re-attach axes after removal
+        self.series_h.attachAxis(self.axis_x_h)
+        self.series_h.attachAxis(self.axis_y)
+        self.series_v.attachAxis(self.axis_x_v)
+        self.series_v.attachAxis(self.axis_y)
+        self.series_spikes_h.attachAxis(self.axis_x_h)
+        self.series_spikes_h.attachAxis(self.axis_y)
+        self.series_spikes_v.attachAxis(self.axis_x_v)
+        self.series_spikes_v.attachAxis(self.axis_y)
 
     def _get_spikes(self, dct: np.ndarray, min_v: int, max_v: int) -> np.ndarray[tuple[int], np.dtype[np.intp]]:
         (max_idx,) = argrelextrema(dct, np.less, order=self.check_radius)
