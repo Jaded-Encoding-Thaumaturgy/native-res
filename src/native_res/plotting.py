@@ -258,6 +258,7 @@ class BasePlotWidget(QChartView):
         buffer = QBuffer(self)
         buffer.open(QIODevice.OpenModeFlag.WriteOnly)
         image.save(buffer, "PNG")  # type: ignore[call-overload]
+        buffer.close()
 
         mime_data = QMimeData()
         mime_data.setData("image/png", buffer.data())
