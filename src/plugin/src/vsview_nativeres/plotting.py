@@ -1,17 +1,17 @@
-from abc import abstractmethod
-from typing import Literal
+from typing import Any, Literal
 
+from jetpytools import copy_signature
 from PySide6.QtCharts import QChart
 from PySide6.QtCore import QIODevice, Qt
 from PySide6.QtGui import QColor, QImage, QPen
-from PySide6.QtWidgets import QWidget
 
-from nativeres.plotting import BasePlotWidget, FrequencyPlotWidget, RescalePlotWidget, get_chart_theme
+from nativeres.plotting import FrequencyPlotWidget, RescalePlotWidget, get_chart_theme
 
 
-class CustomBasePlotWidget(BasePlotWidget):
-    def __init__(self, title: str, parent: QWidget | None = None) -> None:
-        super().__init__(title, parent)
+class CustomRescalePlotWidget(RescalePlotWidget):
+    @copy_signature(RescalePlotWidget.__init__)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
 
         self._theme: Literal[False] | QChart.ChartTheme = False
 
@@ -32,18 +32,6 @@ class CustomBasePlotWidget(BasePlotWidget):
         super().render_to_svg(file, output)
         self.set_background_visible(False)
 
-    @abstractmethod
-    def set_theme(self, theme: Literal[False] | QChart.ChartTheme) -> None: ...
-
-    def set_background_visible(self, visible: bool) -> None:
-        if not visible and self._theme is not False:
-            return
-        self.chart().setBackgroundVisible(visible)
-        self.viewport().setStyleSheet("background: transparent; border: none;" if not visible else "")
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, not visible)
-
-
-class CustomRescalePlotWidget(RescalePlotWidget, CustomBasePlotWidget):
     def set_theme(self, theme: Literal[False] | QChart.ChartTheme) -> None:
         self._theme = theme
         # Force changing theme
@@ -56,8 +44,38 @@ class CustomRescalePlotWidget(RescalePlotWidget, CustomBasePlotWidget):
             self.chart().setTheme(get_chart_theme())
             self.series.setPen(self.default_series_pen)
 
+    def set_background_visible(self, visible: bool) -> None:
+        if not visible and self._theme is not False:
+            return
+        self.chart().setBackgroundVisible(visible)
+        self.viewport().setStyleSheet("background: transparent; border: none;" if not visible else "")
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, not visible)
 
-class CustomFrequencyPlotWidget(FrequencyPlotWidget, CustomBasePlotWidget):
+
+class CustomFrequencyPlotWidget(FrequencyPlotWidget):
+    @copy_signature(FrequencyPlotWidget.__init__)
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+
+        self._theme: Literal[False] | QChart.ChartTheme = False
+
+        self.addActions(self.menu.actions())
+        for act in self.menu.actions():
+            act.setShortcutContext(Qt.ShortcutContext.WidgetShortcut)
+
+        self.reset_action.setShortcut("Esc")
+
+    def render_to_image(self) -> QImage:
+        self.set_background_visible(True)
+        image = super().render_to_image()
+        self.set_background_visible(False)
+        return image
+
+    def render_to_svg(self, file: str | None = None, output: QIODevice | None = None) -> None:
+        self.set_background_visible(True)
+        super().render_to_svg(file, output)
+        self.set_background_visible(False)
+
     def set_theme(
         self,
         theme: Literal[False] | QChart.ChartTheme,
@@ -83,6 +101,13 @@ class CustomFrequencyPlotWidget(FrequencyPlotWidget, CustomBasePlotWidget):
             )
 
         self.apply_focus()
+
+    def set_background_visible(self, visible: bool) -> None:
+        if not visible and self._theme is not False:
+            return
+        self.chart().setBackgroundVisible(visible)
+        self.viewport().setStyleSheet("background: transparent; border: none;" if not visible else "")
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, not visible)
 
     def set_pen(
         self,
