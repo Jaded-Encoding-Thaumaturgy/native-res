@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "native-res"
+name = "nativeres"
 version = "0.1.0"
 description = "Descale analysis tools for VapourSynth"
 readme = "README.md"
@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-native-res = "nativeres.cli:app"
+nativeres = "nativeres.cli:app"
 
 [dependency-groups]
 dev = [
@@ -31,13 +31,13 @@ dev = [
 ]
 
 [project.optional-dependencies]
-plugin = ["vsview-native-res"]
+plugin = ["vsview-nativeres"]
 
 [tool.uv.workspace]
 members = ["src/plugin"]
 
 [tool.uv.sources]
-vsview-native-res = { workspace = true }
+vsview-nativeres = { workspace = true }
 vsjetpack = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack", branch = "main" }
 vsview = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-view", branch = "main" }
 

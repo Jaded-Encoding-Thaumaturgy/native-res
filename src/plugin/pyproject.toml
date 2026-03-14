@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "vsview-native-res"
+name = "vsview-nativeres"
 version = "0.1.0"
 description = "A vsview plugin for analyzing and determining the native resolution of video content"
 readme = "README.md"
@@ -20,10 +20,10 @@ classifiers = [
     "Operating System :: OS Independent",
     "Typing :: Typed",
 ]
-dependencies = ["vsview", "native-res"]
+dependencies = ["vsview", "nativeres"]
 
 [tool.uv.sources]
-native-res = { workspace = true }
+nativeres = { workspace = true }
 
 [project.entry-points.vsview]
 vsview_nativeres = "vsview_nativeres"

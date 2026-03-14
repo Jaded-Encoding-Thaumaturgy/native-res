@@ -8,8 +8,8 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "native-res",
-    "vsview-native-res",
+    "nativeres",
+    "vsview-nativeres",
 ]
 
 [[package]]
@@ -183,7 +183,7 @@ wheels = [
 ]
 
 [[package]]
-name = "native-res"
+name = "nativeres"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
@@ -199,7 +199,7 @@ dependencies = [
 
 [package.optional-dependencies]
 plugin = [
-    { name = "vsview-native-res" },
+    { name = "vsview-nativeres" },
 ]
 
 [package.dev-dependencies]
@@ -220,7 +220,7 @@ requires-dist = [
     { name = "typer", specifier = ">=0.24.0" },
     { name = "vsjetengine", specifier = ">=1.2.0" },
     { name = "vsjetpack", git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack?branch=main" },
-    { name = "vsview-native-res", marker = "extra == 'plugin'", editable = "src/plugin" },
+    { name = "vsview-nativeres", marker = "extra == 'plugin'", editable = "src/plugin" },
 ]
 provides-extras = ["plugin"]
 
@@ -734,16 +734,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "vsview-native-res"
+name = "vsview-nativeres"
 version = "0.1.0"
 source = { editable = "src/plugin" }
 dependencies = [
-    { name = "native-res" },
+    { name = "nativeres" },
     { name = "vsview" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "native-res", editable = "." },
+    { name = "nativeres", editable = "." },
     { name = "vsview", git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-view?branch=main" },
 ]

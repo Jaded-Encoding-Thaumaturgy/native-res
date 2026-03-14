@@ -33,7 +33,7 @@ global_debug_opt = Option(
 
 # App
 app = Typer(
-    name="native-res",
+    name="nativeres",
     rich_markup_mode="rich",
     pretty_exceptions_enable=True,
     add_completion=False,
