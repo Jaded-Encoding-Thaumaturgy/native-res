@@ -3,7 +3,6 @@ from __future__ import annotations
 from concurrent.futures import Future
 from itertools import zip_longest
 from logging import getLogger
-from math import ceil, floor
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -263,13 +262,13 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         with QSignalBlocker(self.range_min_spin), QSignalBlocker(self.range_max_spin):
             match self.current_dimension:
                 case "Height":
-                    self.range_min_spin.setValue(get_h(self.range_min_spin.value(), clip))
-                    self.range_max_spin.setValue(get_h(self.range_max_spin.value(), clip))
+                    self.range_min_spin.setValue(get_h(self.range_min_spin.value(), clip, 1))
+                    self.range_max_spin.setValue(get_h(self.range_max_spin.value(), clip, 1))
                     self.update_limits()
                 case "Width":
                     self.update_limits()
-                    self.range_min_spin.setValue(get_w(self.range_min_spin.value(), clip))
-                    self.range_max_spin.setValue(get_w(self.range_max_spin.value(), clip))
+                    self.range_min_spin.setValue(get_w(self.range_min_spin.value(), clip, 1))
+                    self.range_max_spin.setValue(get_w(self.range_max_spin.value(), clip, 1))
                 case _:
                     raise ValueError("Invalid dimension")
 
@@ -549,8 +548,8 @@ class GetFreqTab(TabContainer):
 
         title = f"DCT Distribution - frame {frame}"
 
-        min_val_h, max_val_h = floor(clip.width * LOW_RATE), ceil(clip.width * HIGH_RATE)
-        min_val_v, max_val_v = floor(clip.height * LOW_RATE), ceil(clip.height * HIGH_RATE)
+        min_val_h, max_val_h = int(clip.width * LOW_RATE), int(clip.width * HIGH_RATE)
+        min_val_v, max_val_v = int(clip.height * LOW_RATE), int(clip.height * HIGH_RATE)
 
         plot = CustomFrequencyPlotWidget(
             title,
