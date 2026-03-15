@@ -28,7 +28,6 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from vskernels import ComplexKernel
 from vstools import get_h, get_w
 from vsview.api import (
     Accordion,
@@ -358,6 +357,7 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         frame = self.api.current_frame
         kernel = self.kernels_cb.currentData()
         metric_mode = cast(MetricMode, self.metrics_cb.currentText())
+        title = f"{self.api.current_voutput.vs_name} - {kernel.pretty_string} on {dim_mode.lower()} - frame {frame}"
 
         self.canvas.setCurrentWidget(self.progress_container)
         self.progress_bar.update_progress(fmt="Gathering data %v / %m", value=0)
@@ -391,7 +391,7 @@ class GetNativeTab(TabContainer, IconReloadMixin):
 
             results = f.result()
 
-            plot = self.create_rescale_plot(results, kernel, dim_mode, frame, x_label_fmt)
+            plot = self.create_rescale_plot(title, results, dim_mode, x_label_fmt)
             self.plot_stack.addWidget(plot)
             # TODO: add in history when it's added
             self.plot_stack.setCurrentWidget(plot)
@@ -402,17 +402,15 @@ class GetNativeTab(TabContainer, IconReloadMixin):
 
     def create_rescale_plot(
         self,
+        title: str,
         results: list[GetNativeResult],
-        kernel: ComplexKernel,
         dim_mode: str,
-        frame: int,
         x_label_fmt: str,
     ) -> CustomRescalePlotWidget:
         from .plotting import CustomRescalePlotWidget
 
         dims, errors = zip(*results)
 
-        title = f"{kernel.pretty_string} on {dim_mode.lower()} - frame {frame}"
         dims = np.fromiter((getattr(d, dim_mode.lower()) for d in dims), dtype=np.float64)
 
         plot = CustomRescalePlotWidget(title, dims, errors, dim_mode.title(), self.plot_stack)
@@ -728,6 +726,7 @@ class GetFreqTab(TabContainer):
         clip = self.api.current_voutput.vs_output.clip
         frame = self.api.current_frame
         cull_rate = self.cull_rate_spin.value()
+        title = f"DCT Distribution - {self.api.current_voutput.vs_name} frame {frame}"
 
         self._last_request_id += 1
         request_id = self._last_request_id
@@ -747,7 +746,7 @@ class GetFreqTab(TabContainer):
                 return
 
             results = f.result()
-            new_plot = self.create_freq_plot(results, clip, frame)
+            new_plot = self.create_freq_plot(title, results, clip)
 
             if self.plot:
                 self.canvas.removeWidget(self.plot)
@@ -761,14 +760,9 @@ class GetFreqTab(TabContainer):
         future_results.add_done_callback(on_completed)
 
     def create_freq_plot(
-        self,
-        results: tuple[NpFloatArray1D, NpFloatArray1D],
-        clip: vs.VideoNode,
-        frame: int,
+        self, title: str, results: tuple[NpFloatArray1D, NpFloatArray1D], clip: vs.VideoNode
     ) -> CustomFrequencyPlotWidget:
         from .plotting import CustomFrequencyPlotWidget
-
-        title = f"DCT Distribution - frame {frame}"
 
         min_val_h, max_val_h = int(clip.width * LOW_RATE), int(clip.width * HIGH_RATE)
         min_val_v, max_val_v = int(clip.height * LOW_RATE), int(clip.height * HIGH_RATE)
