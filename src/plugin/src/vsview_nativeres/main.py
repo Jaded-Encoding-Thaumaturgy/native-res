@@ -189,6 +189,8 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         self.api.globalSettingsChanged.connect(self.on_global_settings_changed)
         self.register_icon_callback(self._reload_icons)
 
+        getnative.cache_rescale.cache_size = self.settings.global_.getnative_cache
+
     @property
     def current_dimension(self) -> str:
         return self.dimension.buttons[self.dimension.index].text()
@@ -262,6 +264,8 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         for i in range(self.plot_stack.count()):
             if isinstance((plot := self.plot_stack.widget(i)), CustomRescalePlotWidget):
                 plot.set_theme(self.settings.global_.get_chart_theme())
+
+        getnative.cache_rescale.cache_size = self.settings.global_.getnative_cache
 
     def _get_max_dim(self) -> int:
         clip = self.api.current_voutput.vs_output.clip
