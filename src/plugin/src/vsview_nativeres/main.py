@@ -179,14 +179,18 @@ class GetNativeTab(TabContainer, IconReloadMixin):
 
         self.add_section(self.canvas, 1)
 
+        self.register_icon_callback(self._reload_icons)
         self._reload_icons()
         self._set_default_values()
         self._set_saved_values()
         self.api.aboutToSaveLocal.connect(self.snapshot_ui_values)
         self.api.globalSettingsChanged.connect(self.on_global_settings_changed)
-        self.register_icon_callback(self._reload_icons)
 
         getnative.cache_rescale.cache_size = self.settings.global_.getnative_cache
+
+    def _reload_icons(self) -> None:
+        icon = (IconName.FILE_IMPORT, self.palette().color(QPalette.ColorGroup.Normal, QPalette.ColorRole.ButtonText))
+        self.import_btn.setIcon(self.make_icon(icon))
 
     def _set_default_values(self) -> None:
         self.dimension.index = 1
@@ -428,10 +432,6 @@ class GetNativeTab(TabContainer, IconReloadMixin):
 
         if not files:
             return
-
-    def _reload_icons(self) -> None:
-        icon = (IconName.FILE_IMPORT, self.palette().color(QPalette.ColorGroup.Normal, QPalette.ColorRole.ButtonText))
-        self.import_btn.setIcon(self.make_icon(icon))
 
 
 class GetScalerTab(TabContainer):
