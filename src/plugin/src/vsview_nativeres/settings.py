@@ -174,5 +174,15 @@ class GetNativeLocalSettings(BaseModel):
     last_metric: str | None = None
 
 
+class GetScalerLocalSettings(BaseModel):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    last_dimension: int | None = None
+    last_target_dimension: float | None = None
+    last_metric: str | None = None
+    last_mask: str | None = None
+
+
 class LocalSettings(BaseModel):
     getnative: GetNativeLocalSettings = Field(default_factory=GetNativeLocalSettings)
+    getscaler: GetScalerLocalSettings = Field(default_factory=GetScalerLocalSettings)

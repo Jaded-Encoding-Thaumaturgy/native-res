@@ -46,6 +46,7 @@ from vsview.api import (
 from nativeres.constants import HIGH_RATE, LOW_RATE
 from nativeres.funcs import (
     GetNativeResult,
+    GetScalerResult,
     MetricMode,
     NpFloatArray1D,
     get_dct_distribution,
@@ -53,11 +54,10 @@ from nativeres.funcs import (
     getscaler,
     resolve_kernel,
 )
-from nativeres.kernels import default_kernels
 
 from .components import GetNativeImportList, ProgressBar, TabContainer
 from .settings import GlobalSettings, LocalSettings
-from .utils import warmup_plots
+from .utils import get_edge_detect_classes, warmup_plots
 
 if TYPE_CHECKING:
     # Lazy import to avoid long startup times because of QChart
@@ -435,28 +435,211 @@ class GetNativeTab(TabContainer, IconReloadMixin):
 
 
 class GetScalerTab(TabContainer):
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        parent: QWidget,
+        api: PluginAPI,
+        settings: PluginSettings[GlobalSettings, LocalSettings],
+    ) -> None:
         super().__init__(parent)
 
-        self.section = Accordion("Controls", self)
-        controls = self.section.add_hlayout()
+        self.api = api
+        self.settings = settings
 
-        self.target_h = QSpinBox(self.section, suffix=" px")
-        self.target_h.setRange(100, 4320)
-        self.target_h.setValue(720)
-        controls.addLayout(self.make_vgroup("Target Height", self.target_h, parent=self.section))
+        self.controls_section = Accordion("Controls", self)
+        controls = self.controls_section.add_hlayout()
 
-        self.calculate_btn = QPushButton("Calculate Scaler", self)
+        self.dimension = SegmentedControl(["Width", "Height"], self.controls_section)
+        self.dimension.current_layout.setContentsMargins(0, 0, 0, 0)
+        self.dimension.current_layout.setSpacing(0)
+        self.dimension.segmentChanged.connect(self.on_segment_changed)
+        self._last_dimension: int | None = None
 
-        self.table = QTableWidget(self.section)
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(["Kernel", "Error %", "MAE"])
+        self.target_dimension = QDoubleSpinBox(
+            self.controls_section,
+            minimum=1,
+            maximum=99999,
+            decimals=3,
+            suffix=" px",
+            singleStep=1,
+            stepType=QDoubleSpinBox.StepType.AdaptiveDecimalStepType,
+        )
+
+        dimension_layout = self.make_vgroup(
+            "Dimension",
+            self.dimension,
+            self.target_dimension,
+            parent=self.controls_section,
+        )
+
+        controls.addLayout(dimension_layout, 1)
+
+        self.metrics_cb = QComboBox(self.controls_section)
+        self.metrics_cb.addItems(MetricMode.__value__.__args__)
+        metrics_layout = self.make_vgroup("Metric", self.metrics_cb, parent=self.controls_section)
+
+        self.mask_cb = QComboBox(self.controls_section)
+        mask_layout = self.make_vgroup("Mask", self.mask_cb, parent=self.controls_section)
+
+        controls.addLayout(metrics_layout)
+        controls.addLayout(mask_layout, 1)
+
+        self.calculate_btn = QPushButton("Calculate", self)
+        self.calculate_btn.clicked.connect(self.on_calculate_clicked)
+
+        self.btn_layout = QHBoxLayout()
+        self.btn_layout.addStretch()
+        self.btn_layout.addWidget(self.calculate_btn)
+        self.btn_layout.addStretch()
+
+        self.table = QTableWidget(self.controls_section, columnCount=3)
+        self.table.setAlternatingRowColors(True)
+        self.table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        self.table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        self.table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
+        self.table.setHorizontalHeaderLabels(["Kernel", "Error %", "Error"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.setMinimumHeight(300)
 
-        self.add_section(self.section)
-        self.add_section(self.calculate_btn)
-        self.add_section(self.table)
+        self.add_section(self.controls_section)
+        self.add_section(self.btn_layout)
+        self.add_section(self.table, 1)
+
+        self._set_default_values()
+        self._set_saved_values()
+        self.api.aboutToSaveLocal.connect(self.snapshot_ui_values)
+
+    def _set_default_values(self) -> None:
+        self.dimension.index = 1
+        self._last_dimension = 1
+
+        with (
+            QSignalBlocker(self.dimension),
+            QSignalBlocker(self.target_dimension),
+            QSignalBlocker(self.metrics_cb),
+            QSignalBlocker(self.mask_cb),
+        ):
+            self.metrics_cb.setCurrentText("MAE")
+            self.target_dimension.setValue(self._get_max_dim() / 1.5)
+
+            for s in get_edge_detect_classes():
+                self.mask_cb.addItem(s.__name__, s)
+            self.mask_cb.insertItem(0, "", None)
+            self.mask_cb.setCurrentText("")
+
+    def _set_saved_values(self) -> None:
+        with QSignalBlocker(self.dimension), QSignalBlocker(self.target_dimension), QSignalBlocker(self.metrics_cb):
+            if (dim := self.settings.local_.getscaler.last_dimension) is not None:
+                self.dimension.index = dim
+                self._last_dimension = dim
+
+            if (dim := self.settings.local_.getscaler.last_target_dimension) is not None:
+                self.target_dimension.setValue(dim)
+
+            if (metric := self.settings.local_.getscaler.last_metric) is not None:
+                self.metrics_cb.setCurrentText(metric)
+
+            if (mask := self.settings.local_.getscaler.last_mask) is not None:
+                self.mask_cb.setCurrentText(mask)
+
+    def snapshot_ui_values(self) -> None:
+        self.settings.local_.getscaler.last_dimension = self.dimension.index
+        self.settings.local_.getscaler.last_target_dimension = self.target_dimension.value()
+        self.settings.local_.getscaler.last_metric = self.metrics_cb.currentText()
+        self.settings.local_.getscaler.last_mask = self.mask_cb.currentText()
+
+    def _get_max_dim(self) -> int:
+        clip = self.api.current_voutput.vs_output.clip
+        return clip.height if self.dimension.index == 1 else clip.width
+
+    def update_limits(self) -> None:
+        max_dim = self._get_max_dim()
+
+        with QSignalBlocker(self.target_dimension):
+            self.target_dimension.setMaximum(max_dim)
+
+    def on_segment_changed(self, index: int) -> None:
+        if self._last_dimension == index:
+            return
+
+        clip = self.api.current_voutput.vs_output.clip
+        self._last_dimension = index
+
+        match self.dimension.index:
+            case 0:
+                func = get_w
+            case 1:
+                func = get_h
+            case _:
+                raise ValueError("Invalid dimension")
+
+        with QSignalBlocker(self.target_dimension):
+            v = self.target_dimension.value()
+            self.update_limits()
+            self.target_dimension.setValue(func(v, clip, 1))
+
+    def on_calculate_clicked(self) -> None:
+        self.calculate_btn.setDisabled(True)
+        self.table.clearContents()
+
+        clip = self.api.current_voutput.vs_output.clip
+        frame = self.api.current_frame
+        kernels = self.settings.global_.kernels
+        metric_mode = cast(MetricMode, self.metrics_cb.currentText())
+        mask = self.mask_cb.currentData()
+
+        match self.dimension.index:
+            case 0:
+                width, height = self.target_dimension.value(), clip.height
+            case 1:
+                width, height = clip.width, self.target_dimension.value()
+            case _:
+                raise ValueError("Invalid dimension")
+
+        @run_in_background(name="GetScalerResults")
+        def get_results() -> list[GetScalerResult]:
+            with self.api.vs_context():
+                return getscaler(
+                    clip,
+                    frame,
+                    width,
+                    height,
+                    kernels,
+                    metric_mode=metric_mode,
+                    mask=mask,
+                    func=self.on_calculate_clicked,
+                )
+
+        @run_in_loop(return_future=False)
+        def on_completed(f: Future[list[GetScalerResult]]) -> None:
+            self.calculate_btn.setEnabled(True)
+            if f.exception():
+                logger.exception("Failed to get scaler results")
+                return
+
+            results = f.result()
+
+            if not results:
+                return
+
+            sorted_ress = sorted(results, key=lambda r: r.error)
+            best = sorted_ress[0]
+
+            self.table.setUpdatesEnabled(False)
+            self.table.setRowCount(len(sorted_ress))
+
+            try:
+                for i, res in enumerate(sorted_ress):
+                    self.table.setItem(i, 0, QTableWidgetItem(res.kernel.pretty_string))
+                    self.table.setItem(
+                        i, 1, QTableWidgetItem(f"{res.error * 100 / best.error if best.error else 0:.2f} %")
+                    )
+                    self.table.setItem(i, 2, QTableWidgetItem(f"{res.error:.13f}"))
+            finally:
+                self.table.setUpdatesEnabled(True)
+
+        future_results = get_results()
+        future_results.add_done_callback(on_completed)
 
 
 class GetFreqTab(TabContainer):
@@ -626,7 +809,7 @@ class NativeResPlugin(WidgetPluginBase[GlobalSettings, LocalSettings]):
         self.tab_getnative = GetNativeTab(self.tabs, self.api, self.settings)
         self.tabs.addTab(self.tab_getnative, "Get Native")
 
-        self.tab_getscaler = GetScalerTab(self.tabs)
+        self.tab_getscaler = GetScalerTab(self.tabs, self.api, self.settings)
         self.tabs.addTab(self.tab_getscaler, "Get Scaler")
 
         self.tab_getfreq = GetFreqTab(self.tabs, self.api, self.settings)
@@ -662,9 +845,8 @@ class NativeResPlugin(WidgetPluginBase[GlobalSettings, LocalSettings]):
         # GetNative Tab
         self.tab_getnative.update_limits()
 
-        # # GetScaler Tab
-        # self.tab_getscaler.target_h.setMaximum(voutput.vs_output.clip.height)
-        # self.tab_getscaler.target_w.setMaximum(voutput.vs_output.clip.width)
+        # GetScaler Tab
+        self.tab_getscaler.update_limits()
 
         # GetFreq Tab
         if self.tab_getfreq.plot:
