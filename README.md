@@ -60,6 +60,8 @@ Usage can be found in the **[plugin README](https://github.com/Jaded-Encoding-Th
 
   ![`nativeres getnative`](/assets/getnative_plot.svg)
 
+  Right-click the plot to open the context menu, where you can reset zoom and copy or export the plot as `PNG`, `SVG`, `JSON`, or `CSV`.
+
 - Displays a table showing the errors of the inverse scalers at height 800 for frame 15000.
 
   ```bash
@@ -75,6 +77,8 @@ Usage can be found in the **[plugin README](https://github.com/Jaded-Encoding-Th
   ```
 
   ![`nativeres getfreq`](/assets/getfreq_plot.svg)
+
+  The frequency plot uses the same right-click context menu for reset zoom plus copy/export actions.
 
 ### Python
 
@@ -301,6 +305,4 @@ Fractional resolution expressed as floating-point width and height.
 
 ## Notes
 
-- `getnative` and `getfreq` open GUI plots.
-- `getscaler` prints a terminal table.
 - You should always visually verify the results on multiple frames before committing to a descale setup.
