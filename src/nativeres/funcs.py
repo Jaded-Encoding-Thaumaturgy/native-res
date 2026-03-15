@@ -55,7 +55,7 @@ class GetNative[**P, R](VSObject):
             return d
 
     def __init__(self, func: Callable[P, R]) -> None:
-        self.cache_rescale = GetNative.CacheRescale(cache_size=20)
+        self.cache_rescale = GetNative.CacheRescale(cache_size=3)
         self._func = func
 
     def __call__(self, *args: P.args, **kwargs: P.kwargs) -> R:
