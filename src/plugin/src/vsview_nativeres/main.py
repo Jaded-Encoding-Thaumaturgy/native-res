@@ -92,8 +92,8 @@ class GetNativeTab(TabContainer, IconReloadMixin):
 
         self.range_min_spin = QSpinBox(self.controls_section, suffix=" px", minimum=0, maximum=99999, singleStep=1)
         self.range_max_spin = QSpinBox(self.controls_section, suffix=" px", minimum=0, maximum=99999, singleStep=1)
-        self.range_min_spin.valueChanged.connect(self._on_range_min_changed)
-        self.range_max_spin.valueChanged.connect(self._on_range_max_changed)
+        self.range_min_spin.valueChanged.connect(self.on_range_min_changed)
+        self.range_max_spin.valueChanged.connect(self.on_range_max_changed)
         range_layout = self.make_vgroup(
             "Range", self.range_min_spin, self.range_max_spin, parent=self.controls_section, stretch=False
         )
@@ -215,6 +215,21 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         self.settings.local_.getnative.last_kernel = resolve_kernel(self.kernels_cb.currentText())
         self.settings.local_.getnative.last_metric = self.metrics_cb.currentText()
 
+    def on_global_settings_changed(self) -> None:
+        kernel = self.kernels_cb.currentText()
+        self.kernels_cb.clear()
+
+        for k in self.settings.global_.kernels:
+            self.kernels_cb.addItem(k.pretty_string, k)
+
+        self.kernels_cb.setCurrentText(kernel)
+
+        from .plotting import CustomRescalePlotWidget
+
+        for i in range(self.plot_stack.count()):
+            if isinstance((plot := self.plot_stack.widget(i)), CustomRescalePlotWidget):
+                plot.set_theme(self.settings.global_.get_chart_theme())
+
     def _get_max_dim(self) -> int:
         clip = self.api.current_voutput.vs_output.clip
         return clip.height if self.current_dimension == "Height" else clip.width
@@ -234,26 +249,11 @@ class GetNativeTab(TabContainer, IconReloadMixin):
             self.range_min_spin.setMaximum(min(self.range_min_spin.maximum(), cur_max - 1))
             self.range_max_spin.setMinimum(cur_min + 1)
 
-    def _on_range_min_changed(self, value: int) -> None:
+    def on_range_min_changed(self, value: int) -> None:
         self.range_max_spin.setMinimum(value + 1)
 
-    def _on_range_max_changed(self, value: int) -> None:
+    def on_range_max_changed(self, value: int) -> None:
         self.range_min_spin.setMaximum(min(value - 1, self._get_max_dim() - 1))
-
-    def on_global_settings_changed(self) -> None:
-        kernel = self.kernels_cb.currentText()
-        self.kernels_cb.clear()
-
-        for k in self.settings.global_.kernels:
-            self.kernels_cb.addItem(k.pretty_string, k)
-
-        self.kernels_cb.setCurrentText(kernel)
-
-        from .plotting import CustomRescalePlotWidget
-
-        for i in range(self.plot_stack.count()):
-            if isinstance((plot := self.plot_stack.widget(i)), CustomRescalePlotWidget):
-                plot.set_theme(self.settings.global_.get_chart_theme())
 
     def on_segment_changed(self, index: int) -> None:
         self.settings.local_.getnative.last_dimension = index
