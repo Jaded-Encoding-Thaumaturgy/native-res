@@ -721,7 +721,7 @@ class GetFreqTab(TabContainer):
 
         self.plot: CustomFrequencyPlotWidget | None = None
 
-        self.calc_timer = QTimer(self, singleShot=True, interval=50)
+        self.calc_timer = QTimer(self, singleShot=True, interval=100)
         self.calc_timer.timeout.connect(lambda: self.on_calculate_clicked() if self.plot else None)
 
         self.controls_section = Accordion("Controls", self)
