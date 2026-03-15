@@ -17,7 +17,7 @@ PACKAGES = {
         "package": "vsview-nativeres",
         "workspace_package": "vsview-nativeres",
         "path": "src/plugin",
-        "environment": "pypi",
+        "environment": "pypi-vsview",
         "url": "https://pypi.org/p/vsview-nativeres",
     },
 }
