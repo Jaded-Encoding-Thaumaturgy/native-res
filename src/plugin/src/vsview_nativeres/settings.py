@@ -98,7 +98,7 @@ class GlobalSettings(BaseModel):
         str,
         Dropdown(
             label="Chart Theme",
-            tooltip="",
+            tooltip="The theme of the chart.",
             items=[
                 ("Default", "Default"),
                 ("Light", "Light"),
@@ -117,8 +117,10 @@ class GlobalSettings(BaseModel):
         *PydanticQColorMetadata,
         ColorPicker(
             label="Frequency Width Color",
-            tooltip="The color of the width distribution in the frequency dimension plot.\n"
-            "Only applies for the default theme",
+            tooltip=(
+                "The color of the width distribution in the frequency dimension plot.\n"
+                "Only applies for the default theme"
+            ),
             to_ui=_freq_dim_color_to_ui,
             from_ui=_freq_dim_color_from_ui,
         ),
@@ -128,8 +130,10 @@ class GlobalSettings(BaseModel):
         *PydanticQColorMetadata,
         ColorPicker(
             label="Frequency Height Color",
-            tooltip="The color of the height distribution in the frequency dimension plot\n"
-            "Only applies for the default theme",
+            tooltip=(
+                "The color of the height distribution in the frequency dimension plot\n"
+                "Only applies for the default theme"
+            ),
             to_ui=_freq_dim_color_to_ui,
             from_ui=_freq_dim_color_from_ui,
         ),
