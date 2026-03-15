@@ -55,7 +55,7 @@ Usage can be found in the **[plugin README](https://github.com/Jaded-Encoding-Th
 - Displays a plot to determine the native resolution height for the frame 15000 with the Bilinear kernel:
 
   ```bash
-  uvx nativeres getnative file.m2ts --frame 15000 --dim-mode height --kernel bilinear
+  nativeres getnative file.m2ts --frame 15000 --dim-mode height --kernel bilinear
   ```
 
   ![`nativeres getnative`](/assets/getnative_plot.svg)
@@ -65,7 +65,7 @@ Usage can be found in the **[plugin README](https://github.com/Jaded-Encoding-Th
 - Displays a table showing the errors of the inverse scalers at height 800 for frame 15000.
 
   ```bash
-  uvx nativeres getscaler file.m2ts 800 --frame 15000 --dim-mode height
+  nativeres getscaler file.m2ts 800 --frame 15000 --dim-mode height
   ```
 
   ![`nativeres getscaler`](/assets/getscaler_table.svg)
@@ -73,7 +73,7 @@ Usage can be found in the **[plugin README](https://github.com/Jaded-Encoding-Th
 - Compute and display a DCT-based frequency plot for the selected frame.
 
   ```bash
-  uvx nativeres getfreq file.m2ts --frame 15000
+  nativeres getfreq file.m2ts --frame 15000
   ```
 
   ![`nativeres getfreq`](/assets/getfreq_plot.svg)
