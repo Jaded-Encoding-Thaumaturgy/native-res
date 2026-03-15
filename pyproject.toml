@@ -1,13 +1,34 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "versioningit"]
 build-backend = "hatchling.build"
 
 [project]
 name = "nativeres"
-version = "0.1.0"
 description = "Descale analysis tools for VapourSynth"
 readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.12"
+authors = [{ name = "Vardë", email = "ichunjo.le.terrible@gmail.com" }]
+maintainers = [{ name = "Vardë", email = "ichunjo.le.terrible@gmail.com" }]
+keywords = [
+    "video",
+    "video-processing",
+    "encoding",
+    "vapoursynth",
+    "native",
+    "resolution",
+]
+classifiers = [
+    "Topic :: Multimedia :: Graphics",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Typing :: Typed",
+]
 dependencies = [
     "jetpytools",
     "vsjetengine>=1.2.0",
@@ -18,9 +39,19 @@ dependencies = [
     "numpy>=2.0.0",
     "scipy>=1.16.0",
 ]
+dynamic = ["version"]
 
 [project.scripts]
 nativeres = "nativeres.cli:app"
+
+[project.urls]
+"Documentation" = "https://github.com/Jaded-Encoding-Thaumaturgy/nativeres/blob/master/README.md"
+"Source Code" = "https://github.com/Jaded-Encoding-Thaumaturgy/nativeres"
+"Bug Tracker" = "https://github.com/Jaded-Encoding-Thaumaturgy/nativeres/issues"
+"Contact" = "https://discord.gg/XTpc6Fa9eB"
+
+[project.optional-dependencies]
+plugin = ["vsview-nativeres"]
 
 [dependency-groups]
 dev = [
@@ -32,19 +63,24 @@ dev = [
     "vsstubs>=1.0.2; python_version>='3.13'",
 ]
 
-[project.optional-dependencies]
-plugin = ["vsview-nativeres"]
+[tool.hatch.version]
+source = "versioningit"
+
+[tool.versioningit.vcs]
+match = ["nativeres/v*"]
+default-tag = "nativeres/v0.0.0"
+
+[tool.versioningit.tag2version]
+rmprefix = "nativeres/v"
 
 [tool.uv.workspace]
 members = ["src/plugin"]
 
 [tool.uv.sources]
 vsview-nativeres = { workspace = true }
-vsjetpack = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-jetpack", branch = "main" }
-vsview = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-view", branch = "main" }
 
 [tool.hatch.build.targets.sdist]
-include = ["src/nativeres", "README.md", "LICENSE", "pyproject.toml"]
+only-include = ["src/nativeres", "scripts", "stubs"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/nativeres"]

@@ -1,10 +1,9 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "versioningit"]
 build-backend = "hatchling.build"
 
 [project]
 name = "vsview-nativeres"
-version = "0.1.0"
 description = "A vsview plugin for analyzing and determining the native resolution of video content"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -20,13 +19,30 @@ classifiers = [
     "Operating System :: OS Independent",
     "Typing :: Typed",
 ]
-dependencies = ["vsview", "nativeres"]
-
-[tool.uv.sources]
-nativeres = { workspace = true }
+dependencies = ["vsview>=0.1.0b5", "nativeres"]
+dynamic = ["version"]
 
 [project.entry-points.vsview]
 vsview_nativeres = "vsview_nativeres"
 
+[project.urls]
+"Documentation" = "https://github.com/Jaded-Encoding-Thaumaturgy/nativeres/blob/master/src/plugin/README.md"
+"Source Code" = "https://github.com/Jaded-Encoding-Thaumaturgy/nativeres/tree/master/src/plugin"
+"Bug Tracker" = "https://github.com/Jaded-Encoding-Thaumaturgy/nativeres/issues"
+"Contact" = "https://discord.gg/XTpc6Fa9eB"
+
+[tool.hatch.version]
+source = "versioningit"
+
+[tool.versioningit.vcs]
+match = ["vsview-nativeres/v*"]
+default-tag = "vsview-nativeres/v0.0.0"
+
+[tool.versioningit.tag2version]
+rmprefix = "vsview-nativeres/v"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/vsview_nativeres"]
+
+[tool.uv.sources]
+nativeres = { workspace = true }

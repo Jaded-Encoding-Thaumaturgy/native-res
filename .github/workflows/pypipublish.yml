@@ -1,0 +1,96 @@
+name: Publish
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Package to publish
+        required: true
+        type: choice
+        options:
+          - nativeres
+          - vsview-nativeres
+      tag_name:
+        description: Optional release tag to check out before building
+        required: false
+        type: string
+
+env:
+  PYTHON_VERSION: "3.14"
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.resolve.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Resolve publish package
+        id: resolve
+        run: python .github/scripts/resolve_package.py
+        env:
+          INPUT_PACKAGE: ${{ inputs.package }}
+          INPUT_TAG_NAME: ${{ inputs.tag_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+
+  package_build:
+    name: ${{ matrix.package }}
+    needs:
+      - prepare
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.prepare.outputs.matrix) }}
+
+    environment:
+      name: ${{ matrix.environment }}
+      url: ${{ matrix.url }}
+
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Check out release tag
+        if: matrix.tag != ''
+        run: git checkout --detach "refs/tags/${{ matrix.tag }}"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build
+        run: uv build --package "${{ matrix.workspace_package }}" --out-dir dist --clear
+
+      - name: Check the output
+        run: uvx twine check --strict dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+      - name: Upload dist/ files to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.whl
+
+      - name: Post webhook for failure
+        if: failure()
+        uses: Jaded-Encoding-Thaumaturgy/discord-failure-notifier@v1
+        with:
+          webhook-url: ${{ secrets.WEBHOOK_URL }}
