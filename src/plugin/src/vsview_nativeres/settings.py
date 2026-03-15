@@ -11,7 +11,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QCompleter, QInputDialog, QLineEdit, QWidget
 from vskernels import ComplexKernel
-from vsview.api import ColorPicker, Dropdown, ListEdit, ListEditWidget, Spin
+from vsview.api import ColorPicker, Dropdown, ListEdit, ListEditWidget
 
 from nativeres.funcs import resolve_kernel
 from nativeres.kernels import default_kernels
@@ -112,15 +112,6 @@ class GlobalSettings(BaseModel):
             ],
         ),
     ] = "Default"
-    getnative_cache: Annotated[
-        int,
-        Spin(
-            label="Get Native Cache",
-            tooltip="The number of graphs to cache for getnative.",
-            min=0,
-            max=20,
-        ),
-    ] = 3
     frequency_width_color: Annotated[
         QColor,
         *PydanticQColorMetadata,

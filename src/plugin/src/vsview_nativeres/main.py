@@ -185,8 +185,6 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         self.api.aboutToSaveLocal.connect(self.snapshot_ui_values)
         self.api.globalSettingsChanged.connect(self.on_global_settings_changed)
 
-        getnative.cache_rescale.cache_size = self.settings.global_.getnative_cache
-
     def _reload_icons(self) -> None:
         icon = (IconName.FILE_IMPORT, self.palette().color(QPalette.ColorGroup.Normal, QPalette.ColorRole.ButtonText))
         self.import_btn.setIcon(self.make_icon(icon))
@@ -262,8 +260,6 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         for i in range(self.plot_stack.count()):
             if isinstance((plot := self.plot_stack.widget(i)), CustomRescalePlotWidget):
                 plot.set_theme(self.settings.global_.get_chart_theme())
-
-        getnative.cache_rescale.cache_size = self.settings.global_.getnative_cache
 
     def _get_max_dim(self) -> int:
         clip = self.api.current_voutput.vs_output.clip
