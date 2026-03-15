@@ -732,8 +732,8 @@ dependencies = [
 
 [[package]]
 name = "vspackrgb"
-version = "1.1.0.post225+g6d6c60b"
-source = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-view?subdirectory=src%2Fvspackrgb&branch=main#6d6c60bd98bca69440279305ecc3b6b85b68c1b2" }
+version = "1.1.0.post231+g15d83e2"
+source = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-view?subdirectory=src%2Fvspackrgb&branch=main#15d83e2eb44bc133c36890e9feb39a0ee4c2457e" }
 dependencies = [
     { name = "vapoursynth" },
 ]
@@ -754,8 +754,8 @@ wheels = [
 
 [[package]]
 name = "vsview"
-version = "0.1.0b4.post29+g6d6c60b"
-source = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-view?branch=main#6d6c60bd98bca69440279305ecc3b6b85b68c1b2" }
+version = "0.1.0b4.post35+g15d83e2"
+source = { git = "https://github.com/Jaded-Encoding-Thaumaturgy/vs-view?branch=main#15d83e2eb44bc133c36890e9feb39a0ee4c2457e" }
 dependencies = [
     { name = "jetpytools" },
     { name = "platformdirs" },
