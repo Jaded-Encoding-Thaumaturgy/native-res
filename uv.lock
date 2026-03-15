@@ -801,7 +801,6 @@ wheels = [
 
 [[package]]
 name = "vsview-nativeres"
-version = "0.1.0"
 source = { editable = "src/plugin" }
 dependencies = [
     { name = "nativeres" },
@@ -811,5 +810,5 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "nativeres", editable = "." },
-    { name = "vsview" },
+    { name = "vsview", specifier = ">=0.1.0b5" },
 ]
