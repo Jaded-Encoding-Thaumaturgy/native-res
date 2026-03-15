@@ -599,6 +599,9 @@ class NativeResPlugin(WidgetPluginBase[GlobalSettings, LocalSettings]):
 
     @run_in_loop(return_future=False)
     def update_ui(self, voutput: VideoOutputProxy) -> None:
+        if self.api.is_playing:
+            return
+
         # GetNative Tab
         self.tab_getnative.update_limits()
 
@@ -607,7 +610,7 @@ class NativeResPlugin(WidgetPluginBase[GlobalSettings, LocalSettings]):
         # self.tab_getscaler.target_w.setMaximum(voutput.vs_output.clip.width)
 
         # GetFreq Tab
-        if self.tab_getfreq.plot and not self.api.is_playing:
+        if self.tab_getfreq.plot:
             self.tab_getfreq.calc_timer.start()
 
     def on_playback_stopped(self) -> None:
