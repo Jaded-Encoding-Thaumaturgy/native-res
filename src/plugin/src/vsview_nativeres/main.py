@@ -86,8 +86,16 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         self.dimension.current_layout.setContentsMargins(0, 0, 0, 0)
         self.dimension.current_layout.setSpacing(0)
         self.dimension.segmentChanged.connect(self.on_segment_changed)
+        self._last_dimension: int | None = None
 
-        controls.addLayout(self.make_vgroup("Dimension", self.dimension, parent=self.controls_section), 1)
+        dimension_layout = self.make_vgroup("Dimension", self.dimension, parent=self.controls_section)
+
+        self.reset_values_btn = QPushButton("Reset Controls", self.controls_section)
+        self.reset_values_btn.clicked.connect(self._set_default_values)
+
+        dimension_layout.addWidget(self.reset_values_btn)
+
+        controls.addLayout(dimension_layout, 1)
 
         self.range_min_spin = QSpinBox(self.controls_section, suffix=" px", minimum=0, maximum=99999, singleStep=1)
         self.range_max_spin = QSpinBox(self.controls_section, suffix=" px", minimum=0, maximum=99999, singleStep=1)
@@ -175,7 +183,8 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         self.add_section(self.canvas, 1)
 
         self._reload_icons()
-        self._setup_default_values()
+        self._set_default_values()
+        self._set_saved_values()
         self.api.aboutToSaveLocal.connect(self.snapshot_ui_values)
         self.api.globalSettingsChanged.connect(self.on_global_settings_changed)
         self.register_icon_callback(self._reload_icons)
@@ -184,25 +193,50 @@ class GetNativeTab(TabContainer, IconReloadMixin):
     def current_dimension(self) -> str:
         return self.dimension.buttons[self.dimension.index].text()
 
-    def _setup_default_values(self) -> None:
-        self.dimension.index = fallback(self.settings.local_.getnative.last_dimension, 1)
-        self.range_max_spin.setValue(
-            fallback(
-                self.settings.local_.getnative.last_max_range,
-                ceil(self.api.current_voutput.vs_output.clip.height * 0.925),
-            )
-        )
-        self.range_min_spin.setValue(
-            fallback(
-                self.settings.local_.getnative.last_min_range,
-                floor(self.api.current_voutput.vs_output.clip.height * 0.465),
-            )
-        )
-        self.step_spin.setValue(fallback(self.settings.local_.getnative.last_step, 1.0))
-        self.kernels_cb.setCurrentText(
-            k.pretty_string if (k := self.settings.local_.getnative.last_kernel) else "Bilinear()"
-        )
-        self.metrics_cb.setCurrentText(fallback(self.settings.local_.getnative.last_metric, "MAE"))
+    def _set_default_values(self) -> None:
+        self.dimension.index = 1
+        self._last_dimension = 1
+        with (
+            QSignalBlocker(self.range_min_spin),
+            QSignalBlocker(self.range_max_spin),
+            QSignalBlocker(self.step_spin),
+            QSignalBlocker(self.kernels_cb),
+            QSignalBlocker(self.metrics_cb),
+        ):
+            self.range_min_spin.setValue(int(self.api.current_voutput.vs_output.clip.height * 0.465))
+            self.range_max_spin.setValue(int(self.api.current_voutput.vs_output.clip.height * 0.925))
+            self.step_spin.setValue(fallback(self.settings.local_.getnative.last_step, 1.0))
+            self.kernels_cb.setCurrentText("Bilinear()")
+            self.metrics_cb.setCurrentText("MAE")
+
+        self.update_limits()
+
+    def _set_saved_values(self) -> None:
+        with (
+            QSignalBlocker(self.dimension),
+            QSignalBlocker(self.range_min_spin),
+            QSignalBlocker(self.range_max_spin),
+            QSignalBlocker(self.step_spin),
+            QSignalBlocker(self.kernels_cb),
+            QSignalBlocker(self.metrics_cb),
+        ):
+            if (d := self.settings.local_.getnative.last_dimension) is not None:
+                self.dimension.index = d
+
+            if (range_min := self.settings.local_.getnative.last_min_range) is not None:
+                self.range_min_spin.setValue(range_min)
+
+            if (range_max := self.settings.local_.getnative.last_max_range) is not None:
+                self.range_max_spin.setValue(range_max)
+
+            if (step := self.settings.local_.getnative.last_step) is not None:
+                self.step_spin.setValue(step)
+
+            if (kernel := self.settings.local_.getnative.last_kernel) is not None:
+                self.kernels_cb.setCurrentText(kernel.pretty_string)
+
+            if (metric := self.settings.local_.getnative.last_metric) is not None:
+                self.metrics_cb.setCurrentText(metric)
 
         self.update_limits()
 
@@ -255,9 +289,12 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         self.range_min_spin.setMaximum(min(value - 1, self._get_max_dim() - 1))
 
     def on_segment_changed(self, index: int) -> None:
-        self.settings.local_.getnative.last_dimension = index
-
         clip = self.api.current_voutput.vs_output.clip
+
+        if self._last_dimension == index:
+            return
+
+        self._last_dimension = index
 
         with QSignalBlocker(self.range_min_spin), QSignalBlocker(self.range_max_spin):
             match self.current_dimension:
