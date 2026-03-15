@@ -163,7 +163,7 @@ class GlobalSettings(BaseModel):
         return False if self.chart_theme == "Default" else getattr(QChart.ChartTheme, f"ChartTheme{self.chart_theme}")
 
 
-class GetNativeSettings(BaseModel):
+class GetNativeLocalSettings(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     last_dimension: int | None = None
@@ -175,4 +175,4 @@ class GetNativeSettings(BaseModel):
 
 
 class LocalSettings(BaseModel):
-    getnative: GetNativeSettings = Field(default_factory=GetNativeSettings)
+    getnative: GetNativeLocalSettings = Field(default_factory=GetNativeLocalSettings)
