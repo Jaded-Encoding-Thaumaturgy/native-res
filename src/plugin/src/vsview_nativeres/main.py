@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QHeaderView,
+    QMessageBox,
     QPushButton,
     QSizePolicy,
     QSpinBox,
@@ -288,6 +289,21 @@ class GetNativeTab(TabContainer, IconReloadMixin):
             num = int((stop - start) / step_f) + 1
             dims = np.linspace(start, start + step_f * (num - 1), num).tolist()
             x_label_fmt = f"%.{str(step_f)[::-1].find('.') + 1}f"
+
+        if len(dims) > 2000:
+            res = QMessageBox.warning(
+                self,
+                "Large Number of Dimensions",
+                f"You are about to calculate {len(dims)} dimensions. "
+                "This may take a long time and use significant memory.\n\n"
+                "Are you sure you want to proceed?",
+                QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+                QMessageBox.StandardButton.Cancel,
+            )
+
+            if res == QMessageBox.StandardButton.Cancel:
+                self.calculate_btn.setEnabled(True)
+                return
 
         match dim_mode := self.current_dimension:
             case "Height":
