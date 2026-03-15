@@ -273,6 +273,8 @@ class GetNativeTab(TabContainer, IconReloadMixin):
                     raise ValueError("Invalid dimension")
 
     def on_calculate_clicked(self) -> None:
+        self.calculate_btn.setDisabled(True)
+
         clip = self.api.current_voutput.vs_output.clip
 
         start = self.range_min_spin.value()
@@ -324,6 +326,7 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         @run_in_loop(return_future=False)
         def on_completed(f: Future[list[GetNativeResult]]) -> None:
             self.progress_bar.reset_progress()
+            self.calculate_btn.setEnabled(True)
             if f.exception():
                 logger.exception("Failed to get native results")
                 return
