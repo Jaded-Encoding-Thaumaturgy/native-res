@@ -94,12 +94,14 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         self.dimension = SegmentedControl(["Width", "Height"], self.controls_section)
         self.dimension.current_layout.setContentsMargins(0, 0, 0, 0)
         self.dimension.current_layout.setSpacing(0)
+        self.dimension.setToolTip("Choose whether to scan candidate source widths or source heights.")
         self.dimension.segmentChanged.connect(self.on_segment_changed)
         self._last_dimension: int | None = None
 
         dimension_layout = self.make_vgroup("Dimension", self.dimension, parent=self.controls_section)
 
         self.reset_values_btn = QPushButton("Reset Controls", self.controls_section)
+        self.reset_values_btn.setToolTip("Restore the default range, step, kernel, and metric for the current clip.")
         self.reset_values_btn.clicked.connect(self._set_default_values)
 
         dimension_layout.addWidget(self.reset_values_btn)
@@ -108,6 +110,8 @@ class GetNativeTab(TabContainer, IconReloadMixin):
 
         self.range_min_spin = QSpinBox(self.controls_section, suffix=" px", minimum=0, maximum=99999, singleStep=1)
         self.range_max_spin = QSpinBox(self.controls_section, suffix=" px", minimum=0, maximum=99999, singleStep=1)
+        self.range_min_spin.setToolTip("Lowest candidate dimension to test.")
+        self.range_max_spin.setToolTip("Highest candidate dimension to test.")
         self.range_min_spin.valueChanged.connect(self.on_range_min_changed)
         self.range_max_spin.valueChanged.connect(self.on_range_max_changed)
         range_layout = self.make_vgroup(
@@ -122,6 +126,7 @@ class GetNativeTab(TabContainer, IconReloadMixin):
             stepType=QDoubleSpinBox.StepType.AdaptiveDecimalStepType,
             value=1.0,
         )
+        self.step_spin.setToolTip("Distance between tested dimensions.\nFractional values are also supported.")
         step_layout = self.make_vgroup("Step", self.step_spin, parent=self.controls_section, stretch=False)
 
         self.range_step_layout = QVBoxLayout()
@@ -132,9 +137,14 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         controls.addLayout(self.range_step_layout, 1)
 
         self.kernels_cb = QComboBox(self.controls_section)
+        self.kernels_cb.setToolTip("Descale kernel used for each candidate resolution test.")
         kernels_layout = self.make_vgroup("Kernel", self.kernels_cb, parent=self.controls_section, stretch=False)
         self.metrics_cb = QComboBox(self.controls_section)
         self.metrics_cb.addItems(MetricMode.__value__.__args__)
+        self.metrics_cb.setToolTip(
+            "Error metric used to compare the descaled frame against the source.\n"
+            "MAE is generally the most stable, while MSE tends to produce steeper slopes."
+        )
         metrics_layout = self.make_vgroup("Metric", self.metrics_cb, parent=self.controls_section, stretch=False)
 
         self.kernels_metrics_layout = QVBoxLayout()
@@ -146,8 +156,12 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         controls.addLayout(self.kernels_metrics_layout, 1)
 
         self.import_btn = QPushButton("Import...", self)
+        self.import_btn.setToolTip("Import saved getnative result plots from JSON or CSV files.")
         self.import_btn.clicked.connect(self.on_import_btn_clicked)
         self.imported_results = GetNativeImportList(self)
+        self.imported_results.setToolTip(
+            "Previously computed or imported plots.\nDouble-click a computed result to jump back to its frame."
+        )
         self.imported_results.itemClicked.connect(self.on_import_item_clicked)
         self.imported_results.itemDoubleClicked.connect(self.on_import_item_double_clicked)
         self.imported_results.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
@@ -158,6 +172,7 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         controls.addLayout(import_layout, 1)
 
         self.calculate_btn = QPushButton("Calculate", self)
+        self.calculate_btn.setToolTip("Run getnative on the current frame using the selected range and kernel.")
         self.calculate_btn.clicked.connect(self.on_calculate_clicked)
 
         self.btn_layout = QHBoxLayout()
@@ -517,6 +532,7 @@ class GetScalerTab(TabContainer):
         self.dimension = SegmentedControl(["Width", "Height"], self.controls_section)
         self.dimension.current_layout.setContentsMargins(0, 0, 0, 0)
         self.dimension.current_layout.setSpacing(0)
+        self.dimension.setToolTip("Choose whether the entered target value represents width or height.")
         self.dimension.segmentChanged.connect(self.on_segment_changed)
         self._last_dimension: int | None = None
 
@@ -529,6 +545,7 @@ class GetScalerTab(TabContainer):
             singleStep=1,
             stepType=QDoubleSpinBox.StepType.AdaptiveDecimalStepType,
         )
+        self.target_dimension.setToolTip("Target descale dimension to test against every configured kernel.")
 
         dimension_layout = self.make_vgroup(
             "Dimension",
@@ -541,15 +558,18 @@ class GetScalerTab(TabContainer):
 
         self.metrics_cb = QComboBox(self.controls_section)
         self.metrics_cb.addItems(MetricMode.__value__.__args__)
+        self.metrics_cb.setToolTip("Error metric used when ranking kernels.")
         metrics_layout = self.make_vgroup("Metric", self.metrics_cb, parent=self.controls_section)
 
         self.mask_cb = QComboBox(self.controls_section)
+        self.mask_cb.setToolTip("Edge-detection mask to reduce noise influence on the metric.")
         mask_layout = self.make_vgroup("Mask", self.mask_cb, parent=self.controls_section)
 
         controls.addLayout(metrics_layout)
         controls.addLayout(mask_layout, 1)
 
         self.calculate_btn = QPushButton("Calculate", self)
+        self.calculate_btn.setToolTip("Run getscaler on the current frame with the selected target dimension.")
         self.calculate_btn.clicked.connect(self.on_calculate_clicked)
 
         self.btn_layout = QHBoxLayout()
@@ -565,6 +585,7 @@ class GetScalerTab(TabContainer):
         self.table.setHorizontalHeaderLabels(["Kernel", "Error %", "Error"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.setMinimumHeight(300)
+        self.table.setToolTip("Kernel ranking for the current frame.\nLower error means a better descale match.")
 
         self.add_section(self.controls_section)
         self.add_section(self.btn_layout)
@@ -737,12 +758,14 @@ class GetFreqTab(TabContainer):
             singleStep=0.1,
             stepType=QDoubleSpinBox.StepType.AdaptiveDecimalStepType,
         )
-        self.cull_rate_spin.setToolTip("Cull the sides/top of the frame to focus on the center.")
+        self.cull_rate_spin.setToolTip(
+            "Cull the outer region of the frame before building the DCT distribution to focus on the center."
+        )
         self.cull_rate_spin.valueChanged.connect(lambda _: self.calc_timer.start())
         controls.addLayout(self.make_vgroup("Cull Rate", self.cull_rate_spin, parent=self.controls_section))
 
         self.radius_spin = QSpinBox(self.controls_section, minimum=1, maximum=100, value=50, suffix=" px")
-        self.radius_spin.setToolTip("Radius for finding peaks/spikes in the frequency plot")
+        self.radius_spin.setToolTip("Neighborhood radius used to detect spikes\nand candidate native-resolution peaks.")
         self.radius_spin.valueChanged.connect(self.on_radius_changed)
         controls.addLayout(self.make_vgroup("Radius", self.radius_spin, parent=self.controls_section))
 
