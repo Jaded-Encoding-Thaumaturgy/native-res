@@ -188,10 +188,6 @@ class GetNativeTab(TabContainer, IconReloadMixin):
 
         getnative.cache_rescale.cache_size = self.settings.global_.getnative_cache
 
-    @property
-    def current_dimension(self) -> str:
-        return self.dimension.buttons[self.dimension.index].text()
-
     def _set_default_values(self) -> None:
         self.dimension.index = 1
         self._last_dimension = 1
@@ -268,7 +264,7 @@ class GetNativeTab(TabContainer, IconReloadMixin):
 
     def _get_max_dim(self) -> int:
         clip = self.api.current_voutput.vs_output.clip
-        return clip.height if self.current_dimension == "Height" else clip.width
+        return clip.height if self.dimension.index == 1 else clip.width
 
     def update_limits(self) -> None:
         max_dim = self._get_max_dim()
@@ -292,25 +288,26 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         self.range_min_spin.setMaximum(min(value - 1, self._get_max_dim() - 1))
 
     def on_segment_changed(self, index: int) -> None:
-        clip = self.api.current_voutput.vs_output.clip
-
         if self._last_dimension == index:
             return
 
+        clip = self.api.current_voutput.vs_output.clip
         self._last_dimension = index
 
+        match self.dimension.index:
+            case 1:
+                func = get_h
+            case 0:
+                func = get_w
+            case _:
+                raise ValueError("Invalid dimension")
+
         with QSignalBlocker(self.range_min_spin), QSignalBlocker(self.range_max_spin):
-            match self.current_dimension:
-                case "Height":
-                    self.range_min_spin.setValue(get_h(self.range_min_spin.value(), clip, 1))
-                    self.range_max_spin.setValue(get_h(self.range_max_spin.value(), clip, 1))
-                    self.update_limits()
-                case "Width":
-                    self.update_limits()
-                    self.range_min_spin.setValue(get_w(self.range_min_spin.value(), clip, 1))
-                    self.range_max_spin.setValue(get_w(self.range_max_spin.value(), clip, 1))
-                case _:
-                    raise ValueError("Invalid dimension")
+            v_min = self.range_min_spin.value()
+            v_max = self.range_max_spin.value()
+            self.update_limits()
+            self.range_min_spin.setValue(func(v_min, clip, 1))
+            self.range_max_spin.setValue(func(v_max, clip, 1))
 
     def on_calculate_clicked(self) -> None:
         self.calculate_btn.setDisabled(True)
@@ -344,11 +341,13 @@ class GetNativeTab(TabContainer, IconReloadMixin):
                 self.calculate_btn.setEnabled(True)
                 return
 
-        match dim_mode := self.current_dimension:
-            case "Height":
+        match dim_mode := self.dimension.index:
+            case 1:
                 dimensions = zip_longest([clip.width], dims, fillvalue=clip.width)
-            case "Width":
+                dim_mode = "Height"
+            case 0:
                 dimensions = zip_longest(dims, [clip.height], fillvalue=clip.height)
+                dim_mode = "Width"
             case _:
                 raise ValueError("Invalid dimension")
 
