@@ -1,22 +1,27 @@
 from __future__ import annotations
 
+import csv
+import json
 from concurrent.futures import Future
 from itertools import zip_longest
 from logging import getLogger
+from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import vapoursynth as vs
 from jetpytools import fallback
-from PySide6.QtCore import QSignalBlocker, QTimer
+from PySide6.QtCore import QSignalBlocker, QTimer, Signal
 from PySide6.QtGui import QPalette, QResizeEvent, QShowEvent, Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
     QFileDialog,
     QFrame,
+    QGraphicsView,
     QHBoxLayout,
     QHeaderView,
+    QListWidgetItem,
     QMessageBox,
     QPushButton,
     QSizePolicy,
@@ -67,6 +72,11 @@ logger = getLogger(__name__)
 
 
 class GetNativeTab(TabContainer, IconReloadMixin):
+    IMPORT_PLOT_ROLE = Qt.ItemDataRole.UserRole
+    IMPORT_FRAME_ROLE = Qt.ItemDataRole.UserRole + 1
+
+    computedPlotAdded = Signal(QGraphicsView)
+
     def __init__(
         self,
         parent: QWidget,
@@ -136,7 +146,10 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         controls.addLayout(self.kernels_metrics_layout, 1)
 
         self.import_btn = QPushButton("Import...", self)
+        self.import_btn.clicked.connect(self.on_import_btn_clicked)
         self.imported_results = GetNativeImportList(self)
+        self.imported_results.itemClicked.connect(self.on_import_item_clicked)
+        self.imported_results.itemDoubleClicked.connect(self.on_import_item_double_clicked)
         self.imported_results.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.MinimumExpanding)
         import_layout = self.make_vgroup(
             "History", self.import_btn, self.imported_results, parent=self.controls_section, stretch=False
@@ -389,9 +402,14 @@ class GetNativeTab(TabContainer, IconReloadMixin):
 
             plot = self.create_rescale_plot(title, results, dim_mode, x_label_fmt)
             self.plot_stack.addWidget(plot)
-            # TODO: add in history when it's added
             self.plot_stack.setCurrentWidget(plot)
             self.canvas.setCurrentWidget(self.plot_stack)
+
+            result_item = QListWidgetItem(title, self.imported_results, QListWidgetItem.ItemType.UserType)
+            result_item.setData(self.IMPORT_PLOT_ROLE, plot)
+            result_item.setData(self.IMPORT_FRAME_ROLE, frame)
+
+            self.computedPlotAdded.emit(plot)
 
         future_results = get_results()
         future_results.add_done_callback(on_completed)
@@ -416,7 +434,6 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         return plot
 
     def on_import_btn_clicked(self) -> None:
-        # TODO
         files, _ = QFileDialog.getOpenFileNames(
             self,
             "Import Results",
@@ -426,6 +443,60 @@ class GetNativeTab(TabContainer, IconReloadMixin):
 
         if not files:
             return
+
+        from .plotting import CustomRescalePlotWidget
+
+        for file_path in files:
+            try:
+                if file_path.endswith(".json"):
+                    dim_mode, dims, errors = self.parse_json(file_path)
+                elif file_path.endswith(".csv"):
+                    dim_mode, dims, errors = self.parse_csv(file_path)
+                else:
+                    raise NotImplementedError(f"Unsupported file format: {file_path}")
+            except Exception:
+                logger.exception("Failed to import results from %s", file_path)
+                QMessageBox.critical(self, "Import Error", f"Failed to import results from {file_path}")
+                break
+
+            title = f"Imported - {Path(file_path).name}"
+            plot = CustomRescalePlotWidget(title, dims, errors, dim_mode.title(), self.plot_stack)
+            plot.set_theme(self.settings.global_.get_chart_theme())
+
+            self.plot_stack.addWidget(plot)
+            self.plot_stack.setCurrentWidget(plot)
+            self.canvas.setCurrentWidget(self.plot_stack)
+
+            result_item = QListWidgetItem(title, self.imported_results, QListWidgetItem.ItemType.UserType)
+            result_item.setData(self.IMPORT_PLOT_ROLE, plot)
+            result_item.setData(self.IMPORT_FRAME_ROLE, None)
+
+    def on_import_item_clicked(self, item: QListWidgetItem) -> None:
+        if plot := item.data(self.IMPORT_PLOT_ROLE):
+            self.plot_stack.setCurrentWidget(plot)
+            self.canvas.setCurrentWidget(self.plot_stack)
+
+    def on_import_item_double_clicked(self, item: QListWidgetItem) -> None:
+        self.on_import_item_clicked(item)
+
+        if (frame := item.data(self.IMPORT_FRAME_ROLE)) is not None:
+            self.api.playback.seek(frame)
+
+    def parse_json(self, file_path: str) -> tuple[str, list[float], list[float]]:
+        with open(file_path) as f:
+            data = json.load(f)
+        dim_mode = data["dimension_mode"]
+        dims = [p["x"] for p in data["data"]]
+        errors = [p["y"] for p in data["data"]]
+        return dim_mode, dims, errors
+
+    def parse_csv(self, file_path: str) -> tuple[str, list[float], list[float]]:
+        with open(file_path, newline="", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            header = next(reader)
+            dim_mode = header[0]
+            data = list(reader)
+        return dim_mode, [float(row[0]) for row in data], [float(row[1]) for row in data]
 
 
 class GetScalerTab(TabContainer):
@@ -797,6 +868,7 @@ class NativeResPlugin(WidgetPluginBase[GlobalSettings, LocalSettings]):
         self.tabs = QTabWidget(self, movable=False, tabsClosable=False)
 
         self.tab_getnative = GetNativeTab(self.tabs, self.api, self.settings)
+        self.tab_getnative.computedPlotAdded.connect(self.dump_plot_results)
         self.tabs.addTab(self.tab_getnative, "Get Native")
 
         self.tab_getscaler = GetScalerTab(self.tabs, self.api, self.settings)
@@ -822,13 +894,13 @@ class NativeResPlugin(WidgetPluginBase[GlobalSettings, LocalSettings]):
 
     # Plugin hooks
     def on_current_voutput_changed(self, voutput: VideoOutputProxy, tab_index: int) -> None:
-        self.update_ui(voutput)
+        self.update_ui()
 
     def on_current_frame_changed(self, n: int) -> None:
-        self.update_ui(self.api.current_voutput)
+        self.update_ui()
 
     @run_in_loop(return_future=False)
-    def update_ui(self, voutput: VideoOutputProxy) -> None:
+    def update_ui(self) -> None:
         if self.api.is_playing:
             return
 
@@ -843,4 +915,13 @@ class NativeResPlugin(WidgetPluginBase[GlobalSettings, LocalSettings]):
             self.tab_getfreq.calc_timer.start()
 
     def on_playback_stopped(self) -> None:
-        self.update_ui(self.api.current_voutput)
+        self.update_ui()
+
+    @run_in_background(name="DumpPlotResults")
+    def dump_plot_results(self, plot: CustomRescalePlotWidget) -> None:
+        if path := self.api.get_local_storage(self):
+            with (path / plot.chart().title()).open("w", encoding="utf-8", newline="") as f:
+                csv.writer(f).writerows(plot.serialize_csv())
+            logger.info("Dumped plot results to %s", path)
+        else:
+            logger.debug("No local storage path found")
