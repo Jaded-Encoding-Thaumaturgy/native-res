@@ -217,29 +217,49 @@ class BasePlotWidget(QChartView):
     @abstractmethod
     def serialize_csv(self) -> Iterable[Iterable[Any]]: ...
 
-    def on_export_json(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export JSON", "", "JSON Files (*.json)")
+    def on_export_json(self, checked: bool = False, filename: str | None = None) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export JSON",
+            filename or self.chart().title(),
+            "JSON Files (*.json)",
+        )
         if path:
             with open(path, "w") as f:
                 json.dump(self.serialize_json(), f, indent=2)
             logger.info("Exported JSON to %s", path)
 
-    def on_export_csv(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
+    def on_export_csv(self, checked: bool = False, filename: str | None = None) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export CSV",
+            filename or self.chart().title(),
+            "CSV Files (*.csv)",
+        )
         if path:
             with open(path, "w", encoding="utf-8", newline="") as f:
                 writer = csv.writer(f)
                 writer.writerows(self.serialize_csv())
             logger.info("Exported CSV to %s", path)
 
-    def on_export_png(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export PNG", "", "PNG Files (*.png)")
+    def on_export_png(self, checked: bool = False, filename: str | None = None) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export PNG",
+            filename or self.chart().title(),
+            "PNG Files (*.png)",
+        )
         if path:
             self.render_to_image().save(path, "PNG")  # type: ignore[call-overload]
             logger.info("Exported PNG to %s", path)
 
-    def on_export_svg(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Export SVG", "", "SVG Files (*.svg)")
+    def on_export_svg(self, checked: bool = False, filename: str | None = None) -> None:
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export SVG",
+            filename or self.chart().title(),
+            "SVG Files (*.svg)",
+        )
         if path:
             self.render_to_svg(file=path)
             logger.info("Exported SVG to %s", path)
