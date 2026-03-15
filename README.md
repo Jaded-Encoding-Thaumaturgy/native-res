@@ -58,7 +58,7 @@ Usage can be found in the **[plugin README](https://github.com/Jaded-Encoding-Th
   nativeres getnative file.m2ts --frame 15000 --dim-mode height --kernel bilinear
   ```
 
-  ![`nativeres getnative`](/assets/getnative_plot.svg)
+  ![`nativeres getnative`](https://raw.githubusercontent.com/Jaded-Encoding-Thaumaturgy/nativeres/master/assets/getnative_plot.svg)
 
   Right-click the plot to open the context menu, where you can reset zoom and copy or export the plot as `PNG`, `SVG`, `JSON`, or `CSV`.
 
@@ -68,7 +68,7 @@ Usage can be found in the **[plugin README](https://github.com/Jaded-Encoding-Th
   nativeres getscaler file.m2ts 800 --frame 15000 --dim-mode height
   ```
 
-  ![`nativeres getscaler`](/assets/getscaler_table.svg)
+  ![`nativeres getscaler`](https://raw.githubusercontent.com/Jaded-Encoding-Thaumaturgy/nativeres/master/assets/getscaler_table.svg)
 
 - Compute and display a DCT-based frequency plot for the selected frame.
 
@@ -76,7 +76,7 @@ Usage can be found in the **[plugin README](https://github.com/Jaded-Encoding-Th
   nativeres getfreq file.m2ts --frame 15000
   ```
 
-  ![`nativeres getfreq`](/assets/getfreq_plot.svg)
+  ![`nativeres getfreq`](https://raw.githubusercontent.com/Jaded-Encoding-Thaumaturgy/nativeres/master/assets/getfreq_plot.svg)
 
   The frequency plot uses the same right-click context menu for reset zoom plus copy/export actions.
 
@@ -103,25 +103,25 @@ print(best.dim.height, best.error)
 
 Main help:
 
-![`nativeres --help`](/assets/nativeres_help.svg)
+![`nativeres --help`](https://raw.githubusercontent.com/Jaded-Encoding-Thaumaturgy/nativeres/master/assets/nativeres_help.svg)
 
 `getnative` help:
 
-![`nativeres getnative --help`](/assets/getnative_help.svg)
+![`nativeres getnative --help`](https://raw.githubusercontent.com/Jaded-Encoding-Thaumaturgy/nativeres/master/assets/getnative_help.svg)
 
 `getscaler` help:
 
-![`nativeres getscaler --help`](/assets/getscaler_help.svg)
+![`nativeres getscaler --help`](https://raw.githubusercontent.com/Jaded-Encoding-Thaumaturgy/nativeres/master/assets/getscaler_help.svg)
 
 `getfreq` help:
 
-![`nativeres getfreq --help`](/assets/getfreq_help.svg)
+![`nativeres getfreq --help`](https://raw.githubusercontent.com/Jaded-Encoding-Thaumaturgy/nativeres/master/assets/getfreq_help.svg)
 
 ## Python API
 
 <!-- markdownlint-disable -->
 
-<a href="src/nativeres/funcs.py#L70"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/Jaded-Encoding-Thaumaturgy/nativeres/blob/master/src/nativeres/funcs.py#L70"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `getnative`
 
@@ -164,7 +164,7 @@ A list of `GetNativeResult` items. Each item contains the tested fractional reso
 
 ---
 
-<a href="src/nativeres/funcs.py#L160"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/Jaded-Encoding-Thaumaturgy/nativeres/blob/master/src/nativeres/funcs.py#L160"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `getscaler`
 
@@ -213,7 +213,7 @@ A list of `GetScalerResult` items. Each item contains the evaluated `kernel` and
 
 ---
 
-<a href="src/nativeres/funcs.py#L234"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/Jaded-Encoding-Thaumaturgy/nativeres/blob/master/src/nativeres/funcs.py#L234"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `get_descale_error`
 
@@ -260,7 +260,7 @@ The computed error as a `float`. Lower values indicate a better descale match.
 
 ---
 
-<a href="src/nativeres/funcs.py#L328"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
+<a href="https://github.com/Jaded-Encoding-Thaumaturgy/nativeres/blob/master/src/nativeres/funcs.py#L328"><img align="right" style="float:right;" src="https://img.shields.io/badge/-source-cccccc?style=flat-square"></a>
 
 ## <kbd>function</kbd> `get_dct_distribution`
 
