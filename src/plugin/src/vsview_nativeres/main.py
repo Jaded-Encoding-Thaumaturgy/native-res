@@ -12,7 +12,7 @@ import numpy as np
 import vapoursynth as vs
 from jetpytools import fallback
 from PySide6.QtCore import QSignalBlocker, QTimer, Signal
-from PySide6.QtGui import QPalette, QResizeEvent, QShowEvent, Qt
+from PySide6.QtGui import QPalette, QShowEvent, Qt
 from PySide6.QtWidgets import (
     QComboBox,
     QDoubleSpinBox,
@@ -161,9 +161,9 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         self.calculate_btn.clicked.connect(self.on_calculate_clicked)
 
         self.btn_layout = QHBoxLayout()
-        self.btn_layout.addStretch()
-        self.btn_layout.addWidget(self.calculate_btn)
-        self.btn_layout.addStretch()
+        self.btn_layout.addStretch(3)
+        self.btn_layout.addWidget(self.calculate_btn, 2)
+        self.btn_layout.addStretch(3)
 
         self.add_section(self.controls_section)
         self.add_section(self.btn_layout)
@@ -878,15 +878,6 @@ class NativeResPlugin(WidgetPluginBase[GlobalSettings, LocalSettings]):
         self.tabs.addTab(self.tab_getfreq, "Get Frequencies")
 
         main_layout.addWidget(self.tabs)
-
-    def resizeEvent(self, event: QResizeEvent, /) -> None:
-        super().resizeEvent(event)
-
-        r1 = self.tab_getnative.range_step_layout.geometry()
-        r2 = self.tab_getnative.kernels_metrics_layout.geometry()
-
-        if r1.isValid() and r2.isValid():
-            self.tab_getnative.calculate_btn.setFixedWidth((r2.right() - r1.left() + 1) // 2)
 
     def showEvent(self, event: QShowEvent) -> None:
         warmup_plots()
