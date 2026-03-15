@@ -123,12 +123,9 @@ class GetNativeTab(TabContainer, IconReloadMixin):
         controls.addLayout(self.range_step_layout, 1)
 
         self.kernels_cb = QComboBox(self.controls_section)
-        for k in self.settings.global_.kernels:
-            self.kernels_cb.addItem(k.pretty_string, k)
         kernels_layout = self.make_vgroup("Kernel", self.kernels_cb, parent=self.controls_section, stretch=False)
         self.metrics_cb = QComboBox(self.controls_section)
         self.metrics_cb.addItems(MetricMode.__value__.__args__)
-        self.metrics_cb.setCurrentText(fallback(self.settings.local_.getnative.last_metric, "MAE"))
         metrics_layout = self.make_vgroup("Metric", self.metrics_cb, parent=self.controls_section, stretch=False)
 
         self.kernels_metrics_layout = QVBoxLayout()
@@ -208,6 +205,8 @@ class GetNativeTab(TabContainer, IconReloadMixin):
             self.range_min_spin.setValue(int(self.api.current_voutput.vs_output.clip.height * 0.465))
             self.range_max_spin.setValue(int(self.api.current_voutput.vs_output.clip.height * 0.925))
             self.step_spin.setValue(fallback(self.settings.local_.getnative.last_step, 1.0))
+            for k in self.settings.global_.kernels:
+                self.kernels_cb.addItem(k.pretty_string, k)
             self.kernels_cb.setCurrentText("Bilinear()")
             self.metrics_cb.setCurrentText("MAE")
 
