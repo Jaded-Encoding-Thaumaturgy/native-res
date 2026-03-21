@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterator, Sequence
+from collections.abc import Iterator
 from contextlib import suppress
 from logging import getLogger
 from typing import TYPE_CHECKING, Annotated, Literal
@@ -9,7 +9,7 @@ from jetpytools import get_subclasses
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, PlainSerializer, ValidationError
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
-from PySide6.QtWidgets import QCompleter, QInputDialog, QLineEdit, QWidget
+from PySide6.QtWidgets import QWidget
 from vskernels import ComplexKernel
 from vsview.api import ColorPicker, Dropdown, ListEdit, ListEditWidget
 
@@ -35,43 +35,26 @@ KERNEL_NAMES = sorted(get_kernel_names())
 
 
 class KernelListEditWidget(ListEditWidget[str]):
-    def __init__(
-        self,
-        value_type: type[str],
-        parent: QWidget | None = None,
-        default_value: str | Sequence[str] | None = None,
-    ) -> None:
-        super().__init__(value_type, parent, default_value)
-        self.list_widget.setMaximumHeight(200)
-
-    def _add_item(self) -> None:
-        dialog = QInputDialog(self)
-        dialog.setInputMode(QInputDialog.InputMode.TextInput)
-        dialog.setWindowTitle("Add Item")
-        dialog.setLabelText("Enter kernel name, class or instance:")
-
-        if line_edit := dialog.findChild(QLineEdit):
-            completer = QCompleter(KERNEL_NAMES, line_edit, caseSensitivity=Qt.CaseSensitivity.CaseInsensitive)
-            line_edit.setCompleter(completer)
-
-        if dialog.exec() and (text := dialog.textValue()):
-            try:
-                self.adapter.validate_python(text)
-            except ValidationError as e:
-                logger.error("Invalid value: %s", e)
-
-            try:
-                resolve_kernel(text)
-            except ValueError as e:
-                logger.error("%s", e)
-                return
-
+    def validate_text(self, text: str) -> None:
+        try:
+            self.adapter.validate_python(text)
+            resolve_kernel(text, ValidationError)
             self.list_widget.addItem(text)
+        except Exception as e:
+            logger.error("Invalid value: %s", e)
 
 
 class KernelsListEdit(ListEdit[str]):
     def create_widget(self, parent: QWidget | None = None) -> KernelListEditWidget:
-        return KernelListEditWidget(self.value_type, parent, self.default_value)
+        w = KernelListEditWidget(
+            self.value_type,
+            parent,
+            self.default_value,
+            "Enter kernel name, class or instance:",
+            KERNEL_NAMES,
+        )
+        w.list_widget.setMaximumHeight(200)
+        return w
 
 
 def _freq_dim_color_to_ui(c: QColor) -> str:
